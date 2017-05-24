@@ -552,7 +552,7 @@ type
     str: PWideChar;
     nImage: SYSINT;
     nState: SYSUINT;
-    lParam: Integer;
+    lParam: Windows.LPARAM;
     iIndent: SYSINT;
   end;
 
@@ -563,7 +563,7 @@ type
     nOpenImage: SYSINT;
     nState: SYSUINT;
     cChildren: SYSINT;
-    lParam: Integer;
+    lParam: Windows.LPARAM;
     relativeID: Integer;
     ID: Integer;
   end;
@@ -679,7 +679,7 @@ type
 
   _MMC_RESTORE_VIEW = record
     dwSize: UINT;
-    cookie: Integer;
+    cookie: NativeInt;
     pViewType: PWideChar;
     lViewOptions: Integer;
   end;
@@ -804,7 +804,7 @@ type
     ['{31DA5FA0-E0EB-11CF-9F21-00AA003CA9F6}']
     function InsertItem(var item: _RESULTDATAITEM): HResult; stdcall;
     function DeleteItem(itemID: Integer; nCol: SYSINT): HResult; stdcall;
-    function FindItemByLParam(lParam: Integer; out pItemID: Integer): HResult; stdcall;
+    function FindItemByLParam(lParam: Windows.LPARAM; out pItemID: Integer): HResult; stdcall;
     function DeleteAllRsltItems: HResult; stdcall;
     function SetItem(var item: _RESULTDATAITEM): HResult; stdcall;
     function GetItem(var item: _RESULTDATAITEM): HResult; stdcall;
@@ -830,9 +830,9 @@ type
     function DeleteItem(hItem: Integer; fDeleteThis: Integer): HResult; stdcall;
     function SetItem(var item: _SCOPEDATAITEM): HResult; stdcall;
     function GetItem(var item: _SCOPEDATAITEM): HResult; stdcall;
-    function GetChildItem(item: Integer; out pItemChild: Integer; out pCookie: Integer): HResult; stdcall;
-    function GetNextItem(item: Integer; out pItemNext: Integer; out pCookie: Integer): HResult; stdcall;
-    function GetParentItem(item: Integer; out pItemParent: Integer; out pCookie: Integer): HResult; stdcall;
+    function GetChildItem(item: Integer; out pItemChild: Integer; out pCookie: NativeInt): HResult; stdcall;
+    function GetNextItem(item: Integer; out pItemNext: Integer; out pCookie: NativeInt): HResult; stdcall;
+    function GetParentItem(item: Integer; out pItemParent: Integer; out pCookie: NativeInt): HResult; stdcall;
   end;
 
 // *********************************************************************//
@@ -842,9 +842,9 @@ type
 // *********************************************************************//
   IPropertySheetProvider = interface(IUnknown)
     ['{85DE64DE-EF21-11CF-A285-00C04FD8DBE6}']
-    function CreatePropertySheet(title: PWideChar; _type: Shortint; cookie: Integer;
+    function CreatePropertySheet(title: PWideChar; _type: Shortint; cookie: NativeInt;
                                  const pIDataObjectm: IDataObject; dwOptions: UINT): HResult; stdcall;
-    function FindPropertySheet(cookie: Integer; const lpComponent: IComponent; 
+    function FindPropertySheet(cookie: NativeInt; const lpComponent: IComponent;
                                const lpDataObject: IDataObject): HResult; stdcall;
     function AddPrimaryPages(const lpUnknown: IUnknown; bCreateHandle: Integer; 
                              var hNotifyWindow: _RemotableHandle; bScopePane: Integer): HResult; stdcall;
@@ -862,10 +862,10 @@ type
     function Initialize(const lpConsole: IConsole): HResult; stdcall;
     function Notify(const lpDataObject: IDataObject; event: _MMC_NOTIFY_TYPE; arg: LPARAM;
                     param: LPARAM): HResult; stdcall;
-    function Destroy(cookie: Integer): HResult; stdcall;
-    function QueryDataObject(cookie: Integer; _type: _DATA_OBJECT_TYPES;
+    function Destroy(cookie: NativeInt): HResult; stdcall;
+    function QueryDataObject(cookie: NativeInt; _type: _DATA_OBJECT_TYPES;
                              out ppDataObject: IDataObject): HResult; stdcall;
-    function GetResultViewType(cookie: Integer; out ppViewType: PWideChar; out pViewOptions: Integer): HResult; stdcall;
+    function GetResultViewType(cookie: NativeInt; out ppViewType: PWideChar; out pViewOptions: Integer): HResult; stdcall;
     function GetDisplayInfo(var pResultDataItem: _RESULTDATAITEM): HResult; stdcall;
     function CompareObjects(const lpDataObjectA: IDataObject; const lpDataObjectB: IDataObject): HResult; stdcall;
   end;
@@ -1024,10 +1024,10 @@ type
     ['{955AB28A-5218-11D0-A985-00C04FD8D565}']
     function Initialize(const pUnknown: IUnknown): HResult; stdcall;
     function CreateComponent(out ppComponent: IComponent): HResult; stdcall;
-    function Notify(const lpDataObject: IDataObject; event: _MMC_NOTIFY_TYPE; arg: Integer; 
-                    param: Integer): HResult; stdcall;
+    function Notify(const lpDataObject: IDataObject; event: _MMC_NOTIFY_TYPE; arg: Windows.LPARAM;
+                    param: Windows.LPARAM): HResult; stdcall;
     function Destroy: HResult; stdcall;
-    function QueryDataObject(cookie: Integer; _type: _DATA_OBJECT_TYPES;
+    function QueryDataObject(cookie: NativeInt; _type: _DATA_OBJECT_TYPES;
                              out ppDataObject: IDataObject): HResult; stdcall;
     function GetDisplayInfo(var pScopeDataItem: _SCOPEDATAITEM): HResult; stdcall;
     function CompareObjects(const lpDataObjectA: IDataObject; const lpDataObjectB: IDataObject): HResult; stdcall;
@@ -1040,7 +1040,7 @@ type
 // *********************************************************************//
   IExtendPropertySheet = interface(IUnknown)
     ['{85DE64DC-EF21-11CF-A285-00C04FD8DBE6}']
-    function CreatePropertyPages(const lpProvider: IPropertySheetCallback; handle: Integer; 
+    function CreatePropertyPages(const lpProvider: IPropertySheetCallback; handle: NativeInt;
                                  const lpIDataObject: IDataObject): HResult; stdcall;
     function QueryPagesFor(const lpDataObject: IDataObject): HResult; stdcall;
   end;
@@ -1064,7 +1064,7 @@ type
 // *********************************************************************//
   IResultDataCompare = interface(IUnknown)
     ['{E8315A52-7A1A-11D0-A2D2-00C04FD909DD}']
-    function Compare(lUserParam: Integer; cookieA: Integer; cookieB: Integer; var pnResult: SYSINT): HResult; stdcall;
+    function Compare(lUserParam: Integer; cookieA: NativeInt; cookieB: NativeInt; var pnResult: SYSINT): HResult; stdcall;
   end;
 
 // *********************************************************************//

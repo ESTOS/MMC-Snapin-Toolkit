@@ -69,6 +69,9 @@
  |                                    Result pane default menu item is now  |
  |                                    called when you double-click the item |
  |                                                                          |
+ |           27/11/2013 CHS           Fixed Cookies-Type (According to      |
+ |                                    http://msdn.microsoft.com/en-us/library/aa814626%28v=vs.85%29.aspx
+ |                                    a cookie is pointer-sized.            |
  | Outstanding issues:                                                      |
  |                                                                          |
  |   Can't add menu buttons at run-time ?                                   |
@@ -112,7 +115,7 @@ private
   fNodeComponent : TSnapinComponent;
 
   function GetNodeForDataObject (const dataObj : IDataObject) : TObject;
-  function GetNodeForCookie (cookie : Integer) : TObject;
+  function GetNodeForCookie (cookie : NativeInt) : TObject;
   function GetWindowHandle: HWND;
   procedure UpdateScopeSettings (scope : TScopeItem);
 
@@ -133,10 +136,10 @@ protected
 
   function ComponentDataInitialize(const pUnknown: IUnknown): HResult; stdcall;
   function ComponentDataCreateComponent(out ppComponent: IComponent): HResult; stdcall;
-  function ComponentDataNotify(const lpDataObject: IDataObject; event: _MMC_NOTIFY_TYPE; arg: Integer;
-                  param: Integer): HResult; stdcall;
+  function ComponentDataNotify(const lpDataObject: IDataObject; event: _MMC_NOTIFY_TYPE; arg: Windows.LPARAM;
+                  param: Windows.LPARAM): HResult; stdcall;
   function ComponentDataDestroy: HResult; stdcall;
-  function ComponentDataQueryDataObject(cookie: Integer; _type: _DATA_OBJECT_TYPES;
+  function ComponentDataQueryDataObject(cookie: NativeInt; _type: _DATA_OBJECT_TYPES;
                            out ppDataObject: IDataObject): HResult; stdcall;
   function ComponentDataGetDisplayInfo(var pScopeDataItem: _SCOPEDATAITEM): HResult; stdcall;
   function ComponentDataCompareObjects(const lpDataObjectA: IDataObject; const lpDataObjectB: IDataObject): HResult; stdcall;
@@ -144,7 +147,7 @@ protected
   function ExtendContextMenuCommand (nCommandID : Integer; const dataObject : IDataObject) : HRESULT; stdcall;
   function ExtendContextMenuAddMenuItems (const dataObject : IDataObject;  const piCallback: IContextMenuCallback; var pInsertionAllowed: Integer) : HRESULT; stdcall;
 
-  function ExtendPropertySheetCreatePropertyPages(const lpProvider: IPropertySheetCallback; handle: Integer;
+  function ExtendPropertySheetCreatePropertyPages(const lpProvider: IPropertySheetCallback; handle: NativeInt;
                                  const lpIDataObject: IDataObject): HResult; stdcall;
   function ExtendPropertySheetQueryPagesFor(const lpDataObject: IDataObject): HResult; stdcall;
 
@@ -272,10 +275,10 @@ protected
   function ComponentInitialize(const lpConsole: IConsole): HResult; stdcall;
   function ComponentNotify(const lpDataObject: IDataObject; event: _MMC_NOTIFY_TYPE; arg: LPARAM;
                   param: LPARAM): HResult; stdcall;
-  function ComponentDestroy(cookie: Integer): HResult; stdcall;
-  function ComponentQueryDataObject(cookie: Integer; _type: _DATA_OBJECT_TYPES;
+  function ComponentDestroy(cookie: NativeInt): HResult; stdcall;
+  function ComponentQueryDataObject(cookie: NativeInt; _type: _DATA_OBJECT_TYPES;
                            out ppDataObject: IDataObject): HResult; stdcall;
-  function ComponentGetResultViewType(cookie: Integer; out ppViewType: PWideChar; out pViewOptions: Integer): HResult; stdcall;
+  function ComponentGetResultViewType(cookie: NativeInt; out ppViewType: PWideChar; out pViewOptions: Integer): HResult; stdcall;
   function ComponentGetDisplayInfo(var pResultDataItem: _RESULTDATAITEM): HResult; stdcall;
   function ComponentCompareObjects(const lpDataObjectA: IDataObject; const lpDataObjectB: IDataObject): HResult; stdcall;
 
@@ -287,10 +290,10 @@ protected
   function ExtendControlbarControlbarNotify(event: _MMC_NOTIFY_TYPE; arg, param: LPARAM): HResult; stdcall;
 
   // IResultDataCompare
-  function ResultDataCompareCompare(lUserParam, cookieA, cookieB: Integer; var pnResult: SYSINT): HResult; stdcall;
+  function ResultDataCompareCompare(lUserParam:Integer; cookieA, cookieB: NativeInt; var pnResult: SYSINT): HResult; stdcall;
 
   // IExtendPropertySheet
-  function ExtendPropertySheetCreatePropertyPages(const lpProvider: IPropertySheetCallback; handle: Integer;
+  function ExtendPropertySheetCreatePropertyPages(const lpProvider: IPropertySheetCallback; handle: NativeInt;
                                  const lpIDataObject: IDataObject): HResult; stdcall;
   function ExtendPropertySheetQueryPagesFor(const lpDataObject: IDataObject): HResult; stdcall;
 
@@ -454,7 +457,7 @@ type
  *----------------------------------------------------------------------*)
 TInternal = record
   m_type : _DATA_OBJECT_TYPES;        // What context is the data object.
-  m_cookie : LongInt;                 // What object the cookie represents
+  m_cookie : NativeInt;                 // What object the cookie represents
   m_clsid : TGuid;                    // Class ID of who created this data object
   m_object : TObject;                 // Hence won't work with DCOM...
   m_snapincomponent : TSnapinComponent;
@@ -532,7 +535,7 @@ end;
  |                                                                      |
  | I got this code from disassembling MMC.LIB.                          |
  *----------------------------------------------------------------------*)
-function MMCFreeNotifyHandle (handle : LongInt) : HRESULT;
+function MMCFreeNotifyHandle (handle : LongInt) : HRESULT; //todo: check correct type
 begin
   if handle = 0 then
     result := E_INVALIDARG
@@ -589,7 +592,7 @@ end;
  | The IS_SPECIAL_COOKIE macro determines whether a cookie is a Special |
  | cookie - like the MMC_MULTI_SELECT_COOKIE, etc.                      |
  *----------------------------------------------------------------------*)
-function IS_SPECIAL_COOKIE (cookie : Integer) : boolean;
+function IS_SPECIAL_COOKIE (cookie : NativeInt) : boolean;
 begin
   result := (cookie >= -10) and (cookie <= -1)
 end;
@@ -1019,7 +1022,7 @@ end;
  *----------------------------------------------------------------------*)
 function TSnapinComponentData.ComponentDataNotify(
   const lpDataObject: IDataObject; event: _MMC_NOTIFY_TYPE; arg,
-  param: Integer): HResult;
+  param: Windows.LPARAM): HResult;
 var
   scopeItem : TScopeItem;
   obj : TObject;
@@ -1098,14 +1101,14 @@ end;
  | Create a data object for this ComponentDataObject.                   |
  |                                                                      |
  | Parameters:                                                          |
- |   cookie : Integer           The cookie to associate with the data   |
+ |   cookie : NativeInt         The cookie to associate with the data   |
  |   _type  : DATA_OBJECT_TYPE  Whether it's a scope or result data     |
  |                              object                                  |
  |   out ppDataObject : IDataObject    Returns the new data object.     |
  |                                                                      |
  | The function returns an OLE success code                             |
  *----------------------------------------------------------------------*)
-function TSnapinComponentData.ComponentDataQueryDataObject(cookie: Integer;
+function TSnapinComponentData.ComponentDataQueryDataObject(cookie: NativeInt;
   _type: _DATA_OBJECT_TYPES; out ppDataObject: IDataObject): HResult;
 var
   dataObject : TDataObject;
@@ -1231,7 +1234,7 @@ begin
         item.cChildren := 1;
       item.relativeID := pParent;
       item.displayname := MMC_CALLBACK;
-      item.lParam := Integer (node);
+      item.lParam := Windows.LPARAM (node);
       hr := FConsoleNameSpace.InsertItem (item);
       node.itemID := item.ID;
       OleCheck (hr);
@@ -1368,7 +1371,7 @@ begin
       item := node.ContextMenu.FindItem(nCommandID, fkCommand);
       if Assigned (item) then
       begin
-        item.Tag := Integer (node);
+        item.Tag := NativeInt (node);
         item.Click
       end
     end;
@@ -1389,7 +1392,7 @@ end;
  | mmc doesn't pop-up the property sheet container dialog.              |
  *----------------------------------------------------------------------*)
 function TSnapinComponentData.ExtendPropertySheetCreatePropertyPages(
-  const lpProvider: IPropertySheetCallback; handle: Integer;
+  const lpProvider: IPropertySheetCallback; handle: NativeInt;
   const lpIDataObject: IDataObject): HResult;
 var
   scope : TObject;
@@ -1403,7 +1406,7 @@ begin
     TScopeItem (scope).OnScopeProperties (scope, changed);
 
     if changed then
-      MMCPropertyChangeNotify (handle, Integer (scope))
+      MMCPropertyChangeNotify (handle, NativeInt (scope))
   end;
 
   MMCFreeNotifyHandle (handle);
@@ -1478,7 +1481,7 @@ end;
  | return the static scope item.                                        |
  *----------------------------------------------------------------------*)
 function TSnapinComponentData.GetNodeForCookie(
-  cookie: Integer): TObject;
+  cookie: NativeInt): TObject;
 begin
   result := Nil;
   if cookie = 0 then
@@ -1532,7 +1535,7 @@ begin
             result := Internal^.m_snapincomponent.fSelectedScopeItem
       end
   finally
-    GlobalFree (Integer (internal))
+    GlobalFree (NativeUInt (internal))
   end
 end;
 
@@ -1708,7 +1711,7 @@ begin
   if Item is TScopeItem then
   begin
     UpdateScopeSettings (TScopeItem (item));
-    ComponentDataQueryDataObject (Integer (Item), 0, dataObject);
+    ComponentDataQueryDataObject (NativeInt (Item), 0, dataObject);
 
     // Clear any cached owner data.   We'll have to get it again from the
     // OnOwnerData event.
@@ -1771,7 +1774,7 @@ begin
       item.nOpenImage := scope.OpenImageIndex;
     end;
 
-    item.lParam := Integer (scope);    // Bug fix.
+    item.lParam := Windows.LPARAM (scope);    // Bug fix.
     item.ID := scope.ItemID;
     item.displayname := MMC_CALLBACK;
     OleCheck (fConsoleNameSpace.SetItem (item))
@@ -1928,8 +1931,8 @@ end;
  |                                                                      |
  | Not currently used by MMC                                            |
  *----------------------------------------------------------------------*)
-function TDataObject.DAdvise(const formatetc: TFormatEtc; advf: Integer;
-  const advSink: IAdviseSink; out dwConnection: Integer): HResult;
+function TDataObject.DAdvise(const formatetc: TFormatEtc; advf: LongInt;
+  const advSink: IAdviseSink; out dwConnection: LongInt): HResult;
 begin
   Result := OLE_E_ADVISENOTSUPPORTED;
 end;
@@ -1940,7 +1943,7 @@ end;
  |                                                                      |
  | Not currently used by MMC                                            |
  *----------------------------------------------------------------------*)
-function TDataObject.DUnadvise(dwConnection: Integer): HResult;
+function TDataObject.DUnadvise(dwConnection: Longint): HResult;
 begin
   Result := OLE_E_ADVISENOTSUPPORTED;
 end;
@@ -2174,7 +2177,7 @@ end;
  |                                                                          |
  | The function returns an OLE success code
  *--------------------------------------------------------------------------*)
-function TSnapinComponent.ComponentDestroy(cookie: Integer): HResult;
+function TSnapinComponent.ComponentDestroy(cookie: NativeInt): HResult;
 begin
   try
     if Assigned (fControlBar) then
@@ -2302,7 +2305,7 @@ end;
  |                                                                          |
  | The function returns an OLE success code
  *--------------------------------------------------------------------------*)
-function TSnapinComponent.ComponentGetResultViewType(cookie: Integer;
+function TSnapinComponent.ComponentGetResultViewType(cookie: NativeInt;
   out ppViewType: PWideChar; out pViewOptions: Integer): HResult;
 var
   ScopeItem : TScopeItem;
@@ -2780,7 +2783,7 @@ begin
                 end
               else
                 if Assigned (sourceItem) then
-                  PInteger (param)^ := Integer (sourceItem);
+                  PNativeInt (param)^ := NativeInt (sourceItem);
             end
           end;
 
@@ -2801,7 +2804,7 @@ end;
  |                                                                          |
  | The function returns an OLE success code
  *--------------------------------------------------------------------------*)
-function TSnapinComponent.ComponentQueryDataObject(cookie: Integer;
+function TSnapinComponent.ComponentQueryDataObject(cookie: NativeInt;
   _type: _DATA_OBJECT_TYPES; out ppDataObject: IDataObject): HResult;
 var
   dataObject : TDataObject;
@@ -2900,7 +2903,7 @@ begin
         resultItem.mask := RDI_STR or RDI_IMAGE or RDI_PARAM or RDI_INDEX;
         resultItem.str := MMC_CALLBACK;
         resultItem.nImage := node.ResultItems [i].ImageIndex;
-        resultItem.lParam := Integer (node.ResultItems [i]);
+        resultItem.lParam := Windows.LPARAM (node.ResultItems [i]);
         fResultData.InsertItem (resultItem);
         node.ResultItems [i].itemID [idx] := resultItem.itemID;
       end;
@@ -2993,7 +2996,7 @@ begin
       item := menu.FindItem(nCommandID, fkCommand);
       if Assigned (item) then
       begin
-        item.Tag := Integer (fLastSelectedItem);
+        item.Tag := NativeInt (fLastSelectedItem);
         item.Click
       end
     end;
@@ -3275,7 +3278,7 @@ begin
               menuItem := menu.FindItem (i, fkCommand);
               if Assigned (menuItem) then
               begin
-                menuITem.Tag := Integer (fLastSelectedItem);
+                menuITem.Tag := NativeInt (fLastSelectedItem);
                 menuItem.Click
               end
             end
@@ -3328,7 +3331,7 @@ end;
 
 
 function TSnapinComponent.ExtendPropertySheetCreatePropertyPages(
-  const lpProvider: IPropertySheetCallback; handle: Integer;
+  const lpProvider: IPropertySheetCallback; handle: NativeInt;
   const lpIDataObject: IDataObject): HResult;
 var
   node : TResultItem;
@@ -3357,7 +3360,7 @@ begin
       scope.OnResultProperties (node, changed);
 
     if changed then
-      MMCPropertyChangeNotify (handle, Integer (node));
+      MMCPropertyChangeNotify (handle, Windows.LPARAM (node));
 
     MMCFreeNotifyHandle (handle);
     result := S_FALSE;   // return false, otherwise MMC displays an empty propert sheet...
@@ -3680,8 +3683,8 @@ end;
  |                                                                          |
  | The function returns an OLE success code
  *--------------------------------------------------------------------------*)
-function TSnapinComponent.ResultDataCompareCompare(lUserParam, cookieA,
-  cookieB: Integer; var pnResult: SYSINT): HResult;
+function TSnapinComponent.ResultDataCompareCompare(lUserParam:Integer; cookieA,
+  cookieB: NativeInt; var pnResult: SYSINT): HResult;
 var
   nCol : Integer;
   szStringA, szStringB : string;
@@ -4006,7 +4009,7 @@ end;
 procedure TSnapinComponent.UpdateScopePane(item : TScopeItem);
 var
   ns : IConsoleNameSpace;
-  cookie : Integer;
+  cookie : NativeInt;
   i, idx : Integer;
   deleteList : TList;
   itm : _SCOPEDATAITEM;
@@ -4047,7 +4050,7 @@ begin
           itm.cChildren := 1;
         itm.relativeID := item.ItemID;
         itm.displayname := MMC_CALLBACK;
-        itm.lParam := Integer (node);
+        itm.lParam := Windows.LPARAM (node);
         ns.InsertItem (itm);
         node.itemID := itm.ID;
 //        OleCheck (hr); // fails unexpectedly sometimes - ignore. 
