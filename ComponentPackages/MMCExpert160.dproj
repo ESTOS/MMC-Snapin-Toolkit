@@ -61,12 +61,12 @@
 			<DCC_UsePackage>vclx;vcl;vclactnband;MMCSnapins160;$(DCC_UsePackage)</DCC_UsePackage>
 			<DCC_Namespace>Data.Win;Datasnap.Win;Web.Win;Soap.Win;Xml.Win;$(DCC_Namespace)</DCC_Namespace>
 			<VerInfo_Locale>1033</VerInfo_Locale>
-			<Icon_MainIcon>MMCExpert160_Icon.ico</Icon_MainIcon>
+			<Icon_MainIcon>$(BDS)\bin\delphi_PROJECTICON.ico</Icon_MainIcon>
 			<Manifest_File>$(BDS)\bin\default_app.manifest</Manifest_File>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Base_Win32)'!=''">
 			<DCC_UsePackage>vclx;vcl;vclactnband;MMCSnapins160;$(DCC_UsePackage)</DCC_UsePackage>
-			<Icon_MainIcon>MMCExpert160_Icon.ico</Icon_MainIcon>
+			<Icon_MainIcon>$(BDS)\bin\delphi_PROJECTICON.ico</Icon_MainIcon>
 			<VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
 			<DCC_Namespace>Data.Win;Datasnap.Win;Web.Win;Soap.Win;Xml.Win;Bde;$(DCC_Namespace)</DCC_Namespace>
 			<Debugger_RunParams>-ns</Debugger_RunParams>
