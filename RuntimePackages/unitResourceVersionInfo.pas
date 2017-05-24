@@ -33,6 +33,8 @@ type
     constructor Create (const AKeyName, AValue : UnicodeString; ALangId, ACodePage : Integer);
     property KeyName : UnicodeString read fKeyName;
     property Value : UnicodeString read fValue;
+    property LangID: Integer read fLangId;
+    property Codepage: Integer read fCodePage;
   end;
 
   TVersionInfoResourceDetails = class (TResourceDetails)

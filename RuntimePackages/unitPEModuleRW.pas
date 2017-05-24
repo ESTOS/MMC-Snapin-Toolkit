@@ -62,7 +62,7 @@ protected
   procedure ApplyGlobalFixups; override;
 public
   constructor Create;
-  procedure Initialize (IsExe, IsGUI : boolean);
+  procedure Initialize (IsExe, IsGUI, Is64bit : boolean);
 
   function GetCodeSection : TImageSection;
   function GetDataSection : TImageSection;
@@ -191,7 +191,10 @@ begin
     fixup := @fFixups [i];
 
     fcs := PDWORD (PByte (codeSection.RawData.Memory) + fixup^.OffsetInCode);
-    Inc (fcs^, fixup^.Section.SectionHeader.VirtualAddress + fOptionalHeader.ImageBase);
+    if fIs64 then
+      Inc (fcs^, fixup^.Section.SectionHeader.VirtualAddress + fOptionalHeader64.ImageBase)
+    else
+      Inc (fcs^, fixup^.Section.SectionHeader.VirtualAddress + fOptionalHeader32.ImageBase);
   end
 end;
 
@@ -288,12 +291,13 @@ begin
   result := ImageSection [fUDataSectionIdx];
 end;
 
-procedure TPEModuleRW.Initialize(IsExe, IsGUI: boolean);
+procedure TPEModuleRW.Initialize(IsExe, IsGUI, Is64bit: boolean);
 var
   dt : TDateTime;
   st : TSystemTime;
   optionalHeaderSize : DWORD;
 begin
+  fIs64 := Is64bit;
   Move (DOSStubInit [0], fDOSHeader, sizeof (fDOSHeader));
 
   DOSStub.Clear;
@@ -309,7 +313,10 @@ begin
 
   fSectionList.Clear;
 
-  optionalHeaderSize := Integer (@(PImageOptionalHeader (0)^.DataDirectory));
+  if fIs64 then
+    optionalHeaderSize := Integer (@(PImageOptionalHeader64 (0)^.DataDirectory))
+  else
+    optionalHeaderSize := Integer (@(PImageOptionalHeader32 (0)^.DataDirectory));
   Inc (optionalHeaderSize, NUM_DATA_DIRECTORIES * sizeof (TImageDataDirectory));
 
   fCOFFHeader.TimeDateStamp := SecondsBetween (dt, UnixDateDelta);
@@ -324,47 +331,94 @@ begin
   fCOFFHeader.NumberOfSymbols := 0;
   fCOFFHeader.SizeOfOptionalHeader := optionalHeaderSize;
 
-  ReallocMem (fOptionalHeader, optionalHeaderSize);
-  ZeroMemory (fOptionalHeader, optionalHeaderSize);
+  if fIs64 then
+  begin
+    ReallocMem (fOptionalHeader64, optionalHeaderSize);
+    ZeroMemory (fOptionalHeader64, optionalHeaderSize);
 
-  fOptionalHeader^.Magic := IMAGE_NT_OPTIONAL_HDR32_MAGIC;
-  fOptionalHeader^.MajorLinkerVersion := PE_LINKER_VERSION_HI;
-  fOptionalHeader^.MinorLinkerVersion := PE_LINKER_VERSION_LO;
+    fOptionalHeader64^.Magic := IMAGE_NT_OPTIONAL_HDR64_MAGIC;
+    fOptionalHeader64^.MajorLinkerVersion := PE_LINKER_VERSION_HI;
+    fOptionalHeader64^.MinorLinkerVersion := PE_LINKER_VERSION_LO;
 
-  fOptionalHeader^.SizeOfCode := 0;               // Filled in by encode
-  fOptionalHeader^.SizeOfInitializedData := 0;    //   "     "  "    "
-  fOptionalHeader^.SizeOfUninitializedData := 0;  //   "     "  "    "
+    fOptionalHeader64^.SizeOfCode := 0;               // Filled in by encode
+    fOptionalHeader64^.SizeOfInitializedData := 0;    //   "     "  "    "
+    fOptionalHeader64^.SizeOfUninitializedData := 0;  //   "     "  "    "
 
-  fOptionalHeader^.AddressOfEntryPoint := 0;
-  fOptionalHeader.BaseOfCode := 0;                //   "     "  "    "
-  fOptionalHeader.BaseOfData := 0;                //   "     "  "    "
-  fOptionalHeader.ImageBase := DefaultImageBase [IsExe];
-  fOptionalHeader.SectionAlignment := $1000;
-  fOptionalHeader.FileAlignment := $200;
+    fOptionalHeader64^.AddressOfEntryPoint := 0;
+    fOptionalHeader64.BaseOfCode := 0;                //   "     "  "    "
+// not existant in 64 bit header    fOptionalHeader64.BaseOfData := 0;                //   "     "  "    "
+    fOptionalHeader64.ImageBase := DefaultImageBase [IsExe];
+    fOptionalHeader64.SectionAlignment := $1000;
+    fOptionalHeader64.FileAlignment := $200;
 
-                                          // Pietrek
-  fOptionalHeader^.MajorOperatingSystemVersion := 5;
-  fOptionalHeader^.MinorOperatingSystemVersion := 0;
-  fOptionalHeader^.MajorImageVersion := 0;
-  fOptionalHeader^.MinorImageVersion := 0;
-  fOptionalHeader^.MajorSubsystemVersion := 4;
-  fOptionalHeader^.MinorSubsystemVersion := 0;
-  fOptionalHeader^.Win32VersionValue := 0;
+                                            // Pietrek
+    fOptionalHeader64^.MajorOperatingSystemVersion := 5;
+    fOptionalHeader64^.MinorOperatingSystemVersion := 0;
+    fOptionalHeader64^.MajorImageVersion := 0;
+    fOptionalHeader64^.MinorImageVersion := 0;
+    fOptionalHeader64^.MajorSubsystemVersion := 4;
+    fOptionalHeader64^.MinorSubsystemVersion := 0;
+    fOptionalHeader64^.Win32VersionValue := 0;
 
-  fOptionalHeader^.SizeOfImage := 0;    // Filled in by Encode
-  fOptionalHeader^.SizeOfHeaders := 0;  //   "     "  "   "
+    fOptionalHeader64^.SizeOfImage := 0;    // Filled in by Encode
+    fOptionalHeader64^.SizeOfHeaders := 0;  //   "     "  "   "
 
-  fOptionalHeader^.CheckSum := 0;       //   "     "  "    "
-  fOptionalHeader^.Subsystem := Subsystems [IsExe, IsGUI];
-  fOptionalHeader^.DllCharacteristics := 0;
+    fOptionalHeader64^.CheckSum := 0;       //   "     "  "    "
+    fOptionalHeader64^.Subsystem := Subsystems [IsExe, IsGUI];
+    fOptionalHeader64^.DllCharacteristics := 0;
 
-  fOptionalHeader^.SizeOfStackReserve := $00100000;
-  fOptionalHeader^.SizeOfStackCommit  := $00004000;
-  fOptionalHeader^.SizeOfHeapReserve  := $00100000;
-  fOptionalHeader^.SizeOfHeapCommit   := $00004000;
-  fOptionalHeader^.LoaderFlags := 0;
+    fOptionalHeader64^.SizeOfStackReserve := $00100000;
+    fOptionalHeader64^.SizeOfStackCommit  := $00004000;
+    fOptionalHeader64^.SizeOfHeapReserve  := $00100000;
+    fOptionalHeader64^.SizeOfHeapCommit   := $00004000;
+    fOptionalHeader64^.LoaderFlags := 0;
 
-  fOptionalHeader^.NumberOfRvaAndSizes := NUM_DATA_DIRECTORIES;
+    fOptionalHeader64^.NumberOfRvaAndSizes := NUM_DATA_DIRECTORIES;
+  end
+  else
+  begin
+    ReallocMem (fOptionalHeader32, optionalHeaderSize);
+    ZeroMemory (fOptionalHeader32, optionalHeaderSize);
+
+    fOptionalHeader32^.Magic := IMAGE_NT_OPTIONAL_HDR32_MAGIC;
+    fOptionalHeader32^.MajorLinkerVersion := PE_LINKER_VERSION_HI;
+    fOptionalHeader32^.MinorLinkerVersion := PE_LINKER_VERSION_LO;
+
+    fOptionalHeader32^.SizeOfCode := 0;               // Filled in by encode
+    fOptionalHeader32^.SizeOfInitializedData := 0;    //   "     "  "    "
+    fOptionalHeader32^.SizeOfUninitializedData := 0;  //   "     "  "    "
+
+    fOptionalHeader32^.AddressOfEntryPoint := 0;
+    fOptionalHeader32.BaseOfCode := 0;                //   "     "  "    "
+    fOptionalHeader32.BaseOfData := 0;                //   "     "  "    "
+    fOptionalHeader32.ImageBase := DefaultImageBase [IsExe];
+    fOptionalHeader32.SectionAlignment := $1000;
+    fOptionalHeader32.FileAlignment := $200;
+
+                                            // Pietrek
+    fOptionalHeader32^.MajorOperatingSystemVersion := 5;
+    fOptionalHeader32^.MinorOperatingSystemVersion := 0;
+    fOptionalHeader32^.MajorImageVersion := 0;
+    fOptionalHeader32^.MinorImageVersion := 0;
+    fOptionalHeader32^.MajorSubsystemVersion := 4;
+    fOptionalHeader32^.MinorSubsystemVersion := 0;
+    fOptionalHeader32^.Win32VersionValue := 0;
+
+    fOptionalHeader32^.SizeOfImage := 0;    // Filled in by Encode
+    fOptionalHeader32^.SizeOfHeaders := 0;  //   "     "  "   "
+
+    fOptionalHeader32^.CheckSum := 0;       //   "     "  "    "
+    fOptionalHeader32^.Subsystem := Subsystems [IsExe, IsGUI];
+    fOptionalHeader32^.DllCharacteristics := 0;
+
+    fOptionalHeader32^.SizeOfStackReserve := $00100000;
+    fOptionalHeader32^.SizeOfStackCommit  := $00004000;
+    fOptionalHeader32^.SizeOfHeapReserve  := $00100000;
+    fOptionalHeader32^.SizeOfHeapCommit   := $00004000;
+    fOptionalHeader32^.LoaderFlags := 0;
+
+    fOptionalHeader32^.NumberOfRvaAndSizes := NUM_DATA_DIRECTORIES;
+  end;
 
   fSectionList.Add(TImportSection.CreateEmpty(self, '.idata', IMAGE_SCN_CNT_INITIALIZED_DATA or IMAGE_SCN_MEM_READ or IMAGE_SCN_MEM_WRITE, IMAGE_DIRECTORY_ENTRY_IMPORT));
 
@@ -499,7 +553,10 @@ begin
       for k := 0 to fn.fFixups.Count - 1 do
       begin
         codeOffset := Integer (fn.fFixups [k]);
-        PDWORD (PByte (codeSection.RawData.Memory) + codeOffset)^ := Integer (piat) - base + rva + Integer (parentImage.OptionalHeader.ImageBase);
+        if parentImage.Is64 then
+          PDWORD (PByte (codeSection.RawData.Memory) + codeOffset)^ := Integer (piat) - base + rva + Integer (parentImage.OptionalHeader64.ImageBase)
+        else
+          PDWORD (PByte (codeSection.RawData.Memory) + codeOffset)^ := Integer (piat) - base + rva + Integer (parentImage.OptionalHeader32.ImageBase);
         TPEModuleRW (Parent).AddReloc (codeOffset);
       end;
 

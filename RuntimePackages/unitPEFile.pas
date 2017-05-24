@@ -111,10 +111,6 @@ TImageImportDescriptor = packed record
 end;
 PImageImportDescriptor = ^TImageImportDescriptor;
 
-//start CHS - apparently missing in XE2
-PImageOptionalHeader = ^TImageOptionalHeader;
-//end CHS
-
 TRawSymbolName = packed record case boolean of
   false : (shortName : array [0..7] of AnsiChar);
   true : (zeros, offset : DWORD);
@@ -213,7 +209,8 @@ private
   fEndComment : PByte;
   fEndCommentSize : Integer;
 
-  function GetOptionalHeader: TImageOptionalHeader;
+  function GetOptionalHeader32: TImageOptionalHeader32;
+  function GetOptionalHeader64: TImageOptionalHeader64;
   function GetDataDirectory(index: Integer): PImageDataDirectory;
   function GetDataDirectoryCount: Integer;
   function GetDOSHeader: TImageDosHeader;
@@ -228,13 +225,17 @@ private
 
 protected
   fDOSHeader : TImageDosHeader;
-  fOptionalHeader : PImageOptionalHeader;
+  fOptionalHeader32 : PImageOptionalHeader32;
+  fOptionalHeader64 : PImageOptionalHeader64;
+
+  fIs64: Boolean;
 
   procedure ApplyGlobalFixups; override;
   procedure Decode (memory : pointer; exeSize : Integer); override;
   procedure Encode; override;
 
-  property OptionalHeaderPtr : PImageOptionalHeader read fOptionalHeader;
+  property OptionalHeaderPtr32 : PImageOptionalHeader32 read fOptionalHeader32;
+  property OptionalHeaderPtr64 : PImageOptionalHeader64 read fOptionalHeader64;
 public
   constructor Create;
   destructor Destroy; override;
@@ -244,9 +245,11 @@ public
 
   function FindDirectoryEntrySection (entryNo : Integer; var offset : Integer): Integer;
 
+  property Is64: Boolean read fIs64;
   property DOSHeader : TImageDosHeader read GetDOSHeader;
   property DOSStub : TMemoryStream read fDOSStub;
-  property OptionalHeader : TImageOptionalHeader read GetOptionalHeader;
+  property OptionalHeader32 : TImageOptionalHeader32 read GetOptionalHeader32;
+  property OptionalHeader64 : TImageOptionalHeader64 read GetOptionalHeader64;
 
   property DataDirectoryCount : Integer read GetDataDirectoryCount;
   property DataDirectory [index : Integer] : PImageDataDirectory read GetDataDirectory;
@@ -418,12 +421,25 @@ begin
                                 // Check the Optional Header signature.  nb
                                 // the optional header is compulsory for
                                 // 32 bit windows modules!
-  if PWORD (PByte (Memory) + offset)^ <> IMAGE_NT_OPTIONAL_HDR_MAGIC then
+  //CHS: Added support for 64 bit header (PE32+ / PE+)
+  if (PWORD (PByte (Memory) + offset)^ = IMAGE_NT_OPTIONAL_HDR32_MAGIC) then
+    fIs64 := false
+  else if (PWORD (PByte (Memory) + offset)^ = IMAGE_NT_OPTIONAL_HDR64_MAGIC) then
+    fIs64 := true
+  else
     raise EPEException.Create (rstInvalidOptionalHeader);
 
                                 // Save the 'optional' header
-  ReallocMem (fOptionalHeader, fCOFFHeader.SizeOfOptionalHeader);
-  Move ((PByte (Memory) + Offset)^, fOptionalHeader^, fCOFFHeader.SizeOfOptionalHeader);
+  if fIs64 then
+  begin
+    ReallocMem (fOptionalHeader64, fCOFFHeader.SizeOfOptionalHeader);
+    Move ((PByte (Memory) + Offset)^, fOptionalHeader64^, fCOFFHeader.SizeOfOptionalHeader);
+  end
+  else
+  begin
+    ReallocMem (fOptionalHeader32, fCOFFHeader.SizeOfOptionalHeader);
+    Move ((PByte (Memory) + Offset)^, fOptionalHeader32^, fCOFFHeader.SizeOfOptionalHeader);
+  end;
 
   Inc (offset, fCOFFHeader.SizeOfOptionalHeader);
 
@@ -486,7 +502,8 @@ end;
  *----------------------------------------------------------------------*)
 destructor TPEModule.Destroy;
 begin
-  ReallocMem (fOptionalHeader, 0);
+  ReallocMem (fOptionalHeader32, 0);
+  ReallocMem (fOptionalHeader64, 0);
   fDOSStub.Free;
   ReallocMem (fCommentBlock, 0);
   ReallocMem (fEndComment, 0);
@@ -528,8 +545,16 @@ begin
 
   offset := iSize + fCommentSize;
 
-  align := fOptionalHeader^.FileAlignment;
-  addrAlign := fOptionalHeader^.SectionAlignment;
+  if fIs64 then
+  begin
+    align := fOptionalHeader64^.FileAlignment;
+    addrAlign := fOptionalHeader64^.SectionAlignment;
+  end
+  else
+  begin
+    align := fOptionalHeader32^.FileAlignment;
+    addrAlign := fOptionalHeader32^.SectionAlignment;
+  end;
 
   address := addrAlign;
   offset := DWORD ((integer (offset) + align - 1) div align * align);
@@ -537,10 +562,21 @@ begin
                                                 // First section starts at $1000 (when loaded)
                                                 // and at 'offset' in file.
 
-  fOptionalHeader^.SizeOfHeaders := DWORD ((integer (iSize) + align - 1) div align * align);
+  if fIs64 then
+    fOptionalHeader64^.SizeOfHeaders := DWORD ((integer (iSize) + align - 1) div align * align)
+  else
+    fOptionalHeader32^.SizeOfHeaders := DWORD ((integer (iSize) + align - 1) div align * align);
 
-  fOptionalHeader^.BaseOfCode := $ffffffff;
-  fOptionalHeader^.CheckSum := 0;               // Calculate it during 'SaveToStream' when
+  if fIs64 then
+  begin
+    fOptionalHeader64^.BaseOfCode := $ffffffff;
+    fOptionalHeader64^.CheckSum := 0;               // Calculate it during 'SaveToStream' when
+  end
+  else
+  begin
+    fOptionalHeader32^.BaseOfCode := $ffffffff;
+    fOptionalHeader32^.CheckSum := 0;               // Calculate it during 'SaveToStream' when
+  end;
                                                 // we've got all the info.
 
   iSize  := DWORD ((integer (iSize) + addrAlign - 1) div addrAlign * addrAlign);
@@ -577,8 +613,16 @@ begin
 
     if (section.fDirectoryEntry <> $ffffffff) and (vs <> 0) then
     begin
-      fOptionalHeader^.DataDirectory [section.fDirectoryEntry].VirtualAddress := address;
-      fOptionalHeader^.DataDirectory [section.fDirectoryEntry].Size := section.fSectionHeader.Misc.VirtualSize
+      if fIs64 then
+      begin
+        fOptionalHeader64^.DataDirectory [section.fDirectoryEntry].VirtualAddress := address;
+        fOptionalHeader64^.DataDirectory [section.fDirectoryEntry].Size := section.fSectionHeader.Misc.VirtualSize
+      end
+      else
+      begin
+        fOptionalHeader32^.DataDirectory [section.fDirectoryEntry].VirtualAddress := address;
+        fOptionalHeader32^.DataDirectory [section.fDirectoryEntry].Size := section.fSectionHeader.Misc.VirtualSize
+      end;
     end;
 
     alignedSize := (Integer (vs) + align - 1) div align * align;
@@ -587,8 +631,16 @@ begin
     if (section.fSectionHeader.Characteristics and IMAGE_SCN_MEM_EXECUTE) <> 0 then
     begin
       Inc (codeSize, alignedSize);
-      if DWORD (address) < fOptionalHeader^.BaseOfCode then
-        fOptionalHeader^.BaseOfCode := address;
+      if fIs64 then
+      begin
+        if DWORD (address) < fOptionalHeader64^.BaseOfCode then
+          fOptionalHeader64^.BaseOfCode := address;
+      end
+      else
+      begin
+        if DWORD (address) < fOptionalHeader32^.BaseOfCode then
+          fOptionalHeader32^.BaseOfCode := address;
+      end;
     end
     else
       if (section.fSectionHeader.Characteristics and IMAGE_SCN_CNT_INITIALIZED_DATA) <> 0 then
@@ -606,9 +658,18 @@ begin
   // derived classes)
   ApplyGlobalFixups;
 
-  fOptionalHeader^.SizeOfCode := codeSize;
-  fOptionalHeader^.SizeOfInitializedData := iDataSize;
-  fOptionalHeader^.SizeOfUninitializedData := uDataSize;
+  if fIs64 then
+  begin
+    fOptionalHeader64^.SizeOfCode := codeSize;
+    fOptionalHeader64^.SizeOfInitializedData := iDataSize;
+    fOptionalHeader64^.SizeOfUninitializedData := uDataSize;
+  end
+  else
+  begin
+    fOptionalHeader32^.SizeOfCode := codeSize;
+    fOptionalHeader32^.SizeOfInitializedData := iDataSize;
+    fOptionalHeader32^.SizeOfUninitializedData := uDataSize;
+  end;
 
   i := SizeOf (DWORD) +                   // NT signature
        sizeof (fCoffHeader) +
@@ -627,15 +688,31 @@ begin
   // doesn't do any harm making it $16000 instead, and the formula works for everything
   // else I've tested...
 
-  fOptionalHeader^.BaseOfData := fOptionalHeader.BaseOfCode + DWORD (i);
 
-  fOptionalHeader^.SizeOfImage := iSize;
+  if not fIs64 then
+    fOptionalHeader32^.BaseOfData := fOptionalHeader32.BaseOfCode + DWORD (i);
 
-  if fOptionalHeader.AddressOfEntryPoint = 0 then
+  if fIs64 then
   begin
-    Section := GetFirstSectionWithCharacteristics (IMAGE_SCN_CNT_CODE);
-    if Section <> Nil then
-      fOptionalHeader.AddressOfEntryPoint := Section.fSectionHeader.VirtualAddress
+    fOptionalHeader64^.SizeOfImage := iSize;
+
+    if fOptionalHeader64.AddressOfEntryPoint = 0 then
+    begin
+      Section := GetFirstSectionWithCharacteristics (IMAGE_SCN_CNT_CODE);
+      if Section <> Nil then
+        fOptionalHeader64.AddressOfEntryPoint := Section.fSectionHeader.VirtualAddress
+    end;
+  end
+  else
+  begin
+    fOptionalHeader32^.SizeOfImage := iSize;
+
+    if fOptionalHeader32.AddressOfEntryPoint = 0 then
+    begin
+      Section := GetFirstSectionWithCharacteristics (IMAGE_SCN_CNT_CODE);
+      if Section <> Nil then
+        fOptionalHeader32.AddressOfEntryPoint := Section.fSectionHeader.VirtualAddress
+    end;
   end;
 end;
 
@@ -678,7 +755,10 @@ var
 begin
   if index < DataDirectoryCount then
   begin
-    p := @fOptionalHeader.DataDirectory [0];
+    if fIs64 then
+      p := @fOptionalHeader64.DataDirectory [0]
+    else
+      p := @fOptionalHeader32.DataDirectory [0];
     Inc (p, index);
     result := p
   end
@@ -693,7 +773,10 @@ end;
  *----------------------------------------------------------------------*)
 function TPEModule.GetDataDirectoryCount: Integer;
 begin
-  result := fOptionalHeader^.NumberOfRvaAndSizes
+  if fIs64 then
+    result := fOptionalHeader64^.NumberOfRvaAndSizes
+  else
+    result := fOptionalHeader32^.NumberOfRvaAndSizes;
 end;
 
 (*----------------------------------------------------------------------*
@@ -847,9 +930,14 @@ begin
   result := PByte (section.fRawData.Memory) - section.fSectionHeader.VirtualAddress;
 end;
 
-function TPEModule.GetOptionalHeader: TImageOptionalHeader;
+function TPEModule.GetOptionalHeader32: TImageOptionalHeader32;
 begin
-  result := fOptionalHeader^
+  result := fOptionalHeader32^
+end;
+
+function TPEModule.GetOptionalHeader64: TImageOptionalHeader64;
+begin
+  result := fOptionalHeader64^
 end;
 
 function TPEModule.GetResourceSection (var offset : Integer): TImageSection;
@@ -891,9 +979,16 @@ begin
                                 // Write NT sig and COFF header
   s.Write (NTSignature, sizeof (NTSignature));
   s.Write (fCOFFHeader, sizeof (fCOFFHeader));
-  ckOffset := s.Position + Integer (@fOptionalHeader^.CheckSum) - Integer (@fOptionalHeader^);
-  s.Write (fOptionalHeader^, fCOFFHeader.SizeOfOptionalHeader);
-
+  if fIs64 then
+  begin
+    ckOffset := s.Position + Integer (@fOptionalHeader64^.CheckSum) - Integer (@fOptionalHeader64^);
+    s.Write (fOptionalHeader64^, fCOFFHeader.SizeOfOptionalHeader);
+  end
+  else
+  begin
+    ckOffset := s.Position + Integer (@fOptionalHeader32^.CheckSum) - Integer (@fOptionalHeader32^);
+    s.Write (fOptionalHeader32^, fCOFFHeader.SizeOfOptionalHeader);
+  end;
                                 // Write the section headers
   for i := 0 to fSectionList.Count - 1 do
   begin
