@@ -860,8 +860,8 @@ type
   IComponent = interface(IUnknown)
     ['{43136EB2-D36C-11CF-ADBC-00AA00A80033}']
     function Initialize(const lpConsole: IConsole): HResult; stdcall;
-    function Notify(const lpDataObject: IDataObject; event: _MMC_NOTIFY_TYPE; arg: Integer; 
-                    param: Integer): HResult; stdcall;
+    function Notify(const lpDataObject: IDataObject; event: _MMC_NOTIFY_TYPE; arg: LPARAM;
+                    param: LPARAM): HResult; stdcall;
     function Destroy(cookie: Integer): HResult; stdcall;
     function QueryDataObject(cookie: Integer; _type: _DATA_OBJECT_TYPES;
                              out ppDataObject: IDataObject): HResult; stdcall;
@@ -926,7 +926,7 @@ type
   IExtendControlbar = interface(IUnknown)
     ['{49506520-6F40-11D0-A98B-00C04FD8D565}']
     function SetControlbar(const pControlbar: IControlbar): HResult; stdcall;
-    function ControlbarNotify(event: _MMC_NOTIFY_TYPE; arg: Integer; param: Integer): HResult; stdcall;
+    function ControlbarNotify(event: _MMC_NOTIFY_TYPE; arg: LPARAM; param: LPARAM): HResult; stdcall;
   end;
 
 // *********************************************************************//

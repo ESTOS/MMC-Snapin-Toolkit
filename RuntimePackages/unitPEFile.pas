@@ -111,6 +111,10 @@ TImageImportDescriptor = packed record
 end;
 PImageImportDescriptor = ^TImageImportDescriptor;
 
+//start CHS - apparently missing in XE2
+PImageOptionalHeader = ^TImageOptionalHeader;
+//end CHS
+
 TRawSymbolName = packed record case boolean of
   false : (shortName : array [0..7] of AnsiChar);
   true : (zeros, offset : DWORD);

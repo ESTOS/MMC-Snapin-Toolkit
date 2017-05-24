@@ -269,8 +269,8 @@ protected
   function IResultOwnerData.SortItems = ResultOwnerDataSortItems;
 
   function ComponentInitialize(const lpConsole: IConsole): HResult; stdcall;
-  function ComponentNotify(const lpDataObject: IDataObject; event: _MMC_NOTIFY_TYPE; arg: Integer;
-                  param: Integer): HResult; stdcall;
+  function ComponentNotify(const lpDataObject: IDataObject; event: _MMC_NOTIFY_TYPE; arg: LPARAM;
+                  param: LPARAM): HResult; stdcall;
   function ComponentDestroy(cookie: Integer): HResult; stdcall;
   function ComponentQueryDataObject(cookie: Integer; _type: _DATA_OBJECT_TYPES;
                            out ppDataObject: IDataObject): HResult; stdcall;
@@ -283,7 +283,7 @@ protected
 
   // IExtendControlbar
   function ExtendControlbarSetControlbar(const pControlbar: IControlbar): HResult; stdcall;
-  function ExtendControlbarControlbarNotify(event: _MMC_NOTIFY_TYPE; arg, param: Integer): HResult; stdcall;
+  function ExtendControlbarControlbarNotify(event: _MMC_NOTIFY_TYPE; arg, param: LPARAM): HResult; stdcall;
 
   // IResultDataCompare
   function ResultDataCompareCompare(lUserParam, cookieA, cookieB: Integer; var pnResult: SYSINT): HResult; stdcall;
@@ -575,7 +575,11 @@ end;
  *----------------------------------------------------------------------*)
 function IS_SPECIAL_DATAOBJECT (d : IDataObject) : BOOL;
 begin
+{$if CompilerVersion >= 23}
+  result := (NativeInt (d) >= -10) and (NativeInt (d) <= 0)
+{$else}
   result := (Integer (d) >= -10) and (Integer (d) <= 0)
+{$ifend}
 end;
 
 (*----------------------------------------------------------------------*
@@ -2410,7 +2414,7 @@ end;
  | The function returns an OLE success code
  *--------------------------------------------------------------------------*)
 function TSnapinComponent.ComponentNotify(const lpDataObject: IDataObject;
-  event: _MMC_NOTIFY_TYPE; arg, param: Integer): HResult;
+  event: _MMC_NOTIFY_TYPE; arg, param: LPARAM): HResult;
 var
   resultItem, resultItem1 : TResultItem;
   scopeItem, scopeItem1 : TScopeItem;
@@ -2993,7 +2997,7 @@ end;
  | The function returns an OLE success code
  *--------------------------------------------------------------------------*)
 function TSnapinComponent.ExtendControlbarControlbarNotify(
-  event: _MMC_NOTIFY_TYPE; arg, param: Integer): HResult;
+  event: _MMC_NOTIFY_TYPE; arg, param: LPARAM): HResult;
 var
   bSelect : BOOL;
   scope, menuScope : TScopeITem;
