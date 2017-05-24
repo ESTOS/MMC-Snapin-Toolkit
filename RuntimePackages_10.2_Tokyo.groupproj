@@ -1,0 +1,98 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{67214D77-BEBC-4CE6-A9E4-55CA3A6D0C33}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="RuntimePackages\LowLevel250.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="RuntimePackages\ImageTypes250.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="RuntimePackages\ResourceUtils250.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="RuntimePackages\NTLowLevel250.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="RuntimePackages\OTAUtils250.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <BorlandProject>
+                <BorlandProject>
+                    <BorlandProject>
+                        <BorlandProject>
+                            <BorlandProject>
+                                <BorlandProject>
+                                    <BorlandProject>
+                                        <Default.Personality/>
+                                    </BorlandProject>
+                                </BorlandProject>
+                            </BorlandProject>
+                        </BorlandProject>
+                    </BorlandProject>
+                </BorlandProject>
+            </BorlandProject>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="LowLevel250">
+        <MSBuild Projects="RuntimePackages\LowLevel250.dproj"/>
+    </Target>
+    <Target Name="LowLevel250:Clean">
+        <MSBuild Projects="RuntimePackages\LowLevel250.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="LowLevel250:Make">
+        <MSBuild Projects="RuntimePackages\LowLevel250.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="ImageTypes250">
+        <MSBuild Projects="RuntimePackages\ImageTypes250.dproj"/>
+    </Target>
+    <Target Name="ImageTypes250:Clean">
+        <MSBuild Projects="RuntimePackages\ImageTypes250.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="ImageTypes250:Make">
+        <MSBuild Projects="RuntimePackages\ImageTypes250.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="ResourceUtils250">
+        <MSBuild Projects="RuntimePackages\ResourceUtils250.dproj"/>
+    </Target>
+    <Target Name="ResourceUtils250:Clean">
+        <MSBuild Projects="RuntimePackages\ResourceUtils250.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="ResourceUtils250:Make">
+        <MSBuild Projects="RuntimePackages\ResourceUtils250.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="NTLowLevel250">
+        <MSBuild Projects="RuntimePackages\NTLowLevel250.dproj"/>
+    </Target>
+    <Target Name="NTLowLevel250:Clean">
+        <MSBuild Projects="RuntimePackages\NTLowLevel250.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="NTLowLevel250:Make">
+        <MSBuild Projects="RuntimePackages\NTLowLevel250.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="OTAUtils250">
+        <MSBuild Projects="RuntimePackages\OTAUtils250.dproj"/>
+    </Target>
+    <Target Name="OTAUtils250:Clean">
+        <MSBuild Projects="RuntimePackages\OTAUtils250.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="OTAUtils250:Make">
+        <MSBuild Projects="RuntimePackages\OTAUtils250.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="LowLevel250;ImageTypes250;ResourceUtils250;NTLowLevel250;OTAUtils250"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="LowLevel250:Clean;ImageTypes250:Clean;ResourceUtils250:Clean;NTLowLevel250:Clean;OTAUtils250:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="LowLevel250:Make;ImageTypes250:Make;ResourceUtils250:Make;NTLowLevel250:Make;OTAUtils250:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>

@@ -1,0 +1,48 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{CACC1E8C-BED6-4C16-B2E7-5FE847FC8B88}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="ComponentPackages\MMCSnapins250.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="ComponentPackages\MMCExpert250.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="MMCSnapins250">
+        <MSBuild Projects="ComponentPackages\MMCSnapins250.dproj"/>
+    </Target>
+    <Target Name="MMCSnapins250:Clean">
+        <MSBuild Projects="ComponentPackages\MMCSnapins250.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MMCSnapins250:Make">
+        <MSBuild Projects="ComponentPackages\MMCSnapins250.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="MMCExpert250">
+        <MSBuild Projects="ComponentPackages\MMCExpert250.dproj"/>
+    </Target>
+    <Target Name="MMCExpert250:Clean">
+        <MSBuild Projects="ComponentPackages\MMCExpert250.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MMCExpert250:Make">
+        <MSBuild Projects="ComponentPackages\MMCExpert250.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="MMCSnapins250;MMCExpert250"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="MMCSnapins250:Clean;MMCExpert250:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="MMCSnapins250:Make;MMCExpert250:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>
