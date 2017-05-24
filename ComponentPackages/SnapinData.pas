@@ -32,7 +32,12 @@ TSnapinDataPasteQuery = procedure (sender, obj : TObject; var allow : boolean) o
 TSnapinDataPaste = procedure (sender, obj : TObject; var PerformCut : boolean) of object;
 TOnOwnerData = procedure (sender : TObject; item : TResultItem) of object;
 TOnInitOCX = procedure (sender : TObject; unk : IUnknown) of object;
-
+// CHS
+TOnResultSortItems = procedure (sender : TObject; Column: Integer; Order: Integer; var allow: boolean) of object;
+TOnResultSelected = procedure (sender : TObject; selecting: boolean) of object;
+TOnActivateOCX = procedure (sender : TObject; unk : IUnknown) of object;
+TOnDeactivateOCX = procedure (sender : TObject; unk : IUnknown) of object;
+// End CHS
 
 TSnapinData = class (TComponent)
 private
@@ -126,11 +131,20 @@ private
 
   fOnScopeProperties: TSnapinDataResultProperties;
   fOnInitOCX: TOnInitOCX;
+  // CHS
+  fOnActivateOCX: TOnActivateOCX;
+  fOnDeactivateOCX: TOnDeactivateOCX;
+  // End CHS
+
   FOnResultPrint: TNotifyEvent;
 
   fCanCopy: boolean;
   fCanCopyResult: boolean;
   FOnScopeRefresh: TNotifyEvent;
+  // CHS
+  fOnResultSortItems: TOnResultSortItems;
+  FOnResultSelected: TOnResultSelected;
+  // End CHS
   FOnPasteQuery: TSnapinDataPasteQuery;
   FOnPaste: TSnapinDataPaste;
   fOnScopeDelete: TSnapinDataResultDelete;
@@ -248,6 +262,12 @@ published
   property OnScopeDelete : TSnapinDataResultDelete read fOnScopeDelete write FOnScopeDelete;
   property OnScopeRename : TSnapinDataResultRename read fOnScopeRename write FOnScopeRename;
   property OnInitOCX : TOnInitOCX read fOnInitOCX write fOnInitOCX;
+  // CHS
+  property OnResultSortItems: TOnResultSortItems read fOnResultSortItems write fOnResultSortItems;
+  property OnResultSelected: TOnResultSelected read FOnResultSelected write FOnResultSelected;
+  property OnActivateOCX: TOnActivateOCX read fOnActivateOCX write fOnActivateOCX;
+  property OnDeactivateOCX: TOnDeactivateOCX read fOnDeactivateOCX write fOnDeactivateOCX;
+  // End CHS
 end;
 
 TScopeItems = class (TOwnedCollection)
@@ -790,6 +810,8 @@ begin
       dst.fOnScopeDelete := FOnScopeDelete;
       dst.FOnResultPrint := FOnResultPrint;
       dst.FOnResultRefresh := FOnResultRefresh;
+      dst.fOnResultSortItems := fOnResultSortItems; // CHS
+      dst.FOnResultSelected := FOnResultSelected; // CHS
       dst.fCanCopy := fCanCopy;
       dst.fCanCopyResult := fCanCopyResult;
       dst.FOnPasteQuery := fOnPasteQuery;

@@ -234,6 +234,7 @@ private
   procedure HandleStandardVerbs (bDeselectAll : boolean; arg : LongInt; scopeItem : TScopeItem; resultItem : TResultItem; isMultiselect : boolean);
   procedure DecodeDataObject (dataObject : IDataObject; var scopeItem : TScopeItem; var resultItem : TResultItem; var MultiSelectResultList: TList);
   function GetScopeItemFromDataObject (dataObject : IDataObject; var isMultiSelect, isScope : boolean) : TScopeItem;
+  function GetScopeItemFromDataObjectEx (dataObject : IDataObject; var isMultiSelect, isScope : boolean; var resultItem: TResultItem; var MultiSelectResultList : TList) : TScopeItem;
   procedure UpdateResultItemSettings (viewIdx : Integer; item : TResultItem);
   procedure SetResultItemState (viewIdx : Integer; item : TResultItem; state : SYSUINT; enable : boolean);
   function GetResultItemState (viewIdx : Integer; item : TResultItem) : SYSUINT;
@@ -2425,6 +2426,7 @@ var
   MultiSelectList : TList;
   updateCol : TCollection;
   mitm : TMenuItem;
+  LIOCX: IUnknown;
 begin
   try
     result := S_OK;
@@ -2462,8 +2464,8 @@ begin
       case event of
         MMCN_INITOCX :
           begin
-//            if Assigned (scopeItem) and Assigned (scopeItem.OnInitOCX) then
-//              scopeItem.OnInitOCX (scopeItem, fIOCX)
+            if Assigned (scopeItem) and Assigned (scopeItem.OnInitOCX) then
+              scopeItem.OnInitOCX (scopeItem, fIOCX)
           end;
 
         MMCN_ACTIVATE :
@@ -2533,8 +2535,24 @@ begin
                   fResultData.DeleteAllRsltItems
               end
               else
-                if bSelect and (scopeItem.ViewType = vtGUID) and Assigned (scopeItem.OnInitOCX) then
-                  scopeItem.OnInitOCX (scopeItem, fIOCX);
+              begin
+//                if bSelect and (scopeItem.ViewType = vtGUID) and Assigned (scopeItem.OnInitOCX) then
+//                  scopeItem.OnInitOCX (scopeItem, fIOCX);
+
+                if Assigned(fConsole2) then
+                  fConsole2.QueryResultView(LIOCX)
+                else
+                  fConsole.QueryResultView(LIOCX);
+                if bSelect and (scopeItem.ViewType = vtGUID) and Assigned (scopeItem.OnActivateOCX) then
+                begin
+                  scopeItem.OnActivateOCX (scopeItem, LIOCX);
+                end;
+                if (not(bSelect)) and (scopeItem.ViewType = vtGUID) and Assigned (scopeItem.OnDeactivateOCX) then
+                begin
+                  scopeItem.OnDeactivateOCX (scopeItem, LIOCX);
+                end;
+              end;
+
             end
           end;
 
@@ -2548,7 +2566,7 @@ begin
             bSelect := HIWORD (arg) <> 0;
             if bSelect and (event = MMCN_SELECT) then
               fParent.fActiveComponent := fParent.fSnapinComponents.IndexOf (self);
-            HandleStandardVerbs(event = MMCN_DESELECT_ALL, arg, scopeItem, resultItem, Assigned (MultiSelectList))
+            HandleStandardVerbs(event = MMCN_DESELECT_ALL, arg, scopeItem, resultItem, Assigned (MultiSelectList));
           end;
 
         MMCN_DBLCLICK :
@@ -3001,6 +3019,8 @@ function TSnapinComponent.ExtendControlbarControlbarNotify(
 var
   bSelect : BOOL;
   scope, menuScope : TScopeITem;
+  resultitem: TResultItem;
+  multiselectList: TList;
   dataObject : IDataObject;
   h : HWND;
   i, idx, hiddenCount : Integer;
@@ -3138,8 +3158,19 @@ begin
       MMCN_SELECT        :
         begin
           dataObject := IDataObject (param);
-          scope := GetScopeItemFromDataObject (dataObject, isMultiSelect, isScope);
+          // CHS: DecodeDataObject doesn't work here for multiselect, so I had
+          // to add a version of GetScopeItemFromDataObject that gives me result
+          // item and multi select list
+          scope := GetScopeItemFromDataObjectEx (dataObject, isMultiSelect, isScope, resultItem, MultiSelectList);
           menuScope := scope;
+
+          if Assigned (scope.OnResultSelected) then
+          begin
+            if isMultiSelect then
+              scope.OnResultSelected(MultiSelectList, not isScope)
+            else
+              scope.OnResultSelected(resultItem, not isScope);
+          end;
 
           buttons := Nil;
           menu := Nil;
@@ -3474,6 +3505,62 @@ begin
     end
 end;
 
+// same as GetScopeItemFromDataObject, but this version also returns the result
+// item and the multi select list
+function TSnapinComponent.GetScopeItemFromDataObjectEx(dataObject: IDataObject;
+  var isMultiSelect, isScope: boolean; var resultItem: TResultItem;
+  var MultiSelectResultList : TList): TScopeItem;
+var
+  node : TObject;
+//  resultItem : TResultItem;
+//  list : TList;
+  medium : TstgMedium;
+  dataObjects : PSMMCDataObjects;
+begin
+  node := fParent.GetNodeForDataObject (dataObject);
+  fLastSelectedItem := node;
+  result := Nil;
+  isMultiSelect := False;
+  isScope := False;
+
+  if not Assigned (node) then
+  begin
+    if CreateStgMediumFromDataObject (dataObject, s_cfMultiSelSnapins, medium) = S_OK then
+    try
+      dataObjects := PSMMCDataObjects (GlobalLock (medium.hGlobal));
+      try
+        if dataObjects^.count > 0 then
+        begin
+          MultiSelectResultList := fParent.GetNodeForDataObject (dataObjects^.lpDataObject [0]) as TList;
+          fLastSelectedItem := MultiSelectResultList;
+          if MultiSelectResultList.Count > 0 then
+          begin
+            node := TScopeItem (MultiSelectResultList [0]);
+            isScope := True;
+            isMultiSelect := True
+          end
+        end
+      finally
+        GlobalUnlock (medium.hGlobal)
+      end
+    finally
+      ReleaseStgMedium (medium)
+    end
+  end;
+
+  if Assigned (node) then
+    if node is TScopeItem then
+    begin
+      result := TScopeItem (node);
+      isScope := not isScope;
+    end
+    else
+    begin
+      resultItem := node as TResultItem;
+      result := resultItem.ScopeItem
+    end
+end;
+
 procedure TSnapinComponent.HandleStandardVerbs(bDeselectAll: boolean;
   arg: Integer; scopeItem : TScopeItem; resultItem : TResultItem; isMultiSelect : boolean);
 var
@@ -3665,8 +3752,17 @@ end;
 
 function TSnapinComponent.ResultOwnerDataSortItems(nColumn: SYSINT;
   dwSortOptions: UINT; lUserParam: Integer): HResult;
+var
+  allow: boolean;
 begin
   result := S_FALSE;
+  //CHS: added column sorting
+  if Assigned (fSelectedScopeItem) and Assigned (fSelectedScopeItem.OnOwnerData) and Assigned(fSelectedScopeItem.OnResultSortItems) then
+  begin
+    fSelectedScopeItem.OnResultSortItems(fSelectedScopeItem, nColumn, dwSortOptions, allow);
+    if allow then
+      result := S_OK;
+  end;
 end;
 
 function TSnapinComponent.SelectedResultItem: TResultItem;
