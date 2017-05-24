@@ -11,6 +11,7 @@
  | -------  ----------  ----  ------------------------------------------|
  | 1.0      06/02/2001  CPWW  Original                                  |
  |          16/5/2008   CPWW  Tiburon version                           |
+ |          24/52017    C.Späth - estos GmbH Delphi 10.2 Tokyo version  |
  *======================================================================*)
 unit unitResourceVersionInfo;
 
@@ -288,10 +289,14 @@ begin
 end;
 
 function TVersionInfoResourceDetails.GetFileVersion: TULargeInteger;
+var
+  // TULargeInteger changed meaning between XE2 and 10.2 Tokyo (case-record to alias for Uint64)
+  tmpResult : ULARGE_INTEGER;
 begin
   GetFixedFileInfo;
-  result.LowPart := fFixedInfo^.dwFileVersionLS;
-  result.HighPart := fFixedInfo^.dwFileVersionMS;
+  tmpResult.LowPart := fFixedInfo^.dwFileVersionLS;
+  tmpResult.HighPart := fFixedInfo^.dwFileVersionMS;
+  result := tmpResult.QuadPart;
 end;
 
 procedure TVersionInfoResourceDetails.GetFixedFileInfo;
@@ -441,10 +446,14 @@ begin
 end;
 
 function TVersionInfoResourceDetails.GetProductVersion: TULargeInteger;
+var
+  // TULargeInteger changed meaning between XE2 and 10.2 Tokyo (case-record to alias for Uint64)
+  tmpResult : ULARGE_INTEGER;
 begin
   GetFixedFileInfo;
-  result.LowPart := fFixedInfo^.dwProductVersionLS;
-  result.HighPart := fFixedInfo^.dwProductVersionMS
+  tmpResult.LowPart := fFixedInfo^.dwProductVersionLS;
+  tmpResult.HighPart := fFixedInfo^.dwProductVersionMS;
+  result := tmpResult.QuadPart;
 end;
 
 function TVersionInfoResourceDetails.IndexOf(
@@ -537,12 +546,16 @@ end;
 
 procedure TVersionInfoResourceDetails.SetFileVersion(
   const Value: TULargeInteger);
+var
+  // TULargeInteger changed meaning between XE2 and 10.2 Tokyo (case-record to alias for Uint64)
+  tmpValue : ULARGE_INTEGER;
 begin
   GetFixedFileInfo;
-  if (value.LowPart <> fFixedInfo^.dwFileVersionLS) or (value.HighPart <> fFixedInfo^.dwFileVersionMS) then
+  tmpValue.QuadPart := value;
+  if (tmpValue.LowPart <> fFixedInfo^.dwFileVersionLS) or (tmpValue.HighPart <> fFixedInfo^.dwFileVersionMS) then
   begin
-    fFixedInfo^.dwFileVersionLS := value.LowPart;
-    fFixedInfo^.dwFileVersionMS := value.HighPart;
+    fFixedInfo^.dwFileVersionLS := tmpValue.LowPart;
+    fFixedInfo^.dwFileVersionMS := tmpValue.HighPart;
   end
 end;
 
@@ -575,12 +588,16 @@ end;
 
 procedure TVersionInfoResourceDetails.SetProductVersion(
   const Value: TULargeInteger);
+var
+  // TULargeInteger changed meaning between XE2 and 10.2 Tokyo (case-record to alias for Uint64)
+  tmpValue : ULARGE_INTEGER;
 begin
   GetFixedFileInfo;
-  if (value.LowPart <> fFixedInfo^.dwProductVersionLS) or (value.HighPart <> fFixedInfo^.dwProductVersionMS) then
+  tmpValue.QuadPart := Value;
+  if (tmpValue.LowPart <> fFixedInfo^.dwProductVersionLS) or (tmpValue.HighPart <> fFixedInfo^.dwProductVersionMS) then
   begin
-    fFixedInfo^.dwProductVersionLS := value.LowPart;
-    ffixedInfo^.dwProductVersionMS := value.HighPart;
+    fFixedInfo^.dwProductVersionLS := tmpValue.LowPart;
+    ffixedInfo^.dwProductVersionMS := tmpValue.HighPart;
   end
 end;
 

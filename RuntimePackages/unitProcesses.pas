@@ -360,7 +360,7 @@ begin
       buffer := Nil;
       try
         ReallocMem (buffer, 1024*1024);
-        if not psapi.EnumProcessModules(hProcess, buffer, 1024*1024, bufLen) then bufLen := 0;
+        if not psapi.EnumProcessModules(hProcess, PHMODULE(buffer), 1024*1024, bufLen) then bufLen := 0;
         ReallocMem (buffer, bufLen);
         modCount := bufLen div sizeof (PDWORD);
 

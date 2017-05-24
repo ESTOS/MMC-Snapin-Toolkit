@@ -228,7 +228,7 @@ begin
   if handle <> 0 then
   try
     ReallocMem (fModuleList, 65536);
-    if not EnumProcessModules (handle, fModuleList, 65536, cbNeeded) then cbNeeded := 0;
+    if not EnumProcessModules (handle, PHMODULE(fModuleList), 65536, cbNeeded) then cbNeeded := 0;
     ReallocMem (fModuleList, cbNeeded);
     fModuleCount := cbNeeded div sizeof (hInst)
   finally
