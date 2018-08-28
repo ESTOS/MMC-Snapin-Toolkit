@@ -1,6 +1,7 @@
 unit MMC_TLB;
 
 // *** Fix bug in TLB
+//        27/08/2018 CHS           Fixed several types according to MSDN
 // ************************************************************************ //
 // WARNING                                                                  //
 // -------                                                                  //
@@ -70,6 +71,11 @@ const
   IID_IExtendTaskPad: TGUID = '{8DEE6511-554D-11D1-9FEA-00600832DB4A}';
   IID_IRequiredExtensions: TGUID = '{72782D7A-A4A0-11D1-AF0F-00C04FB6DD2C}';
 
+
+type
+  _HSCOPEITEM = LONG_PTR;
+  _HRESULTITEM = LONG_PTR;
+  MMC_COOKIE = LONG_PTR;
 // *********************************************************************//
 // Declaration of Enumerations defined in Type Library                  //
 // *********************************************************************//
@@ -544,28 +550,28 @@ type
   end;
 
   _RESULTDATAITEM = record
-    mask: UINT;
-    bScopeItem: Integer;
-    itemID: Integer;
-    nIndex: SYSINT;
-    nCol: SYSINT;
-    str: PWideChar;
-    nImage: SYSINT;
-    nState: SYSUINT;
-    lParam: Windows.LPARAM;
-    iIndent: SYSINT;
+    mask: UINT;             // DWORD
+    bScopeItem: Integer;    // BOOL
+    itemID: _HRESULTITEM;   // HRESULTITEM
+    nIndex: SYSINT;         // int
+    nCol: SYSINT;           // int
+    str: PWideChar;         // LPOLESTR
+    nImage: SYSINT;         // int
+    nState: SYSUINT;        // UNIT
+    lParam: Windows.LPARAM; // LPARAM
+    iIndent: SYSINT;        // int
   end;
 
   _SCOPEDATAITEM = record
-    mask: UINT;
-    displayname: PWideChar;
-    nImage: SYSINT;
-    nOpenImage: SYSINT;
-    nState: SYSUINT;
-    cChildren: SYSINT;
-    lParam: Windows.LPARAM;
-    relativeID: Integer;
-    ID: Integer;
+    mask: UINT;                 // DWORD
+    displayname: PWideChar;     // LPOLESTR
+    nImage: SYSINT;             // int
+    nOpenImage: SYSINT;         // int
+    nState: SYSUINT;            // UINT
+    cChildren: SYSINT;          // int
+    lParam: Windows.LPARAM;     // LPARAM
+    relativeID: _HSCOPEITEM;    // HSCOPEITEM
+    ID: _HSCOPEITEM;            // HSCOPEITEM
   end;
 
   _PSP = record
@@ -573,18 +579,18 @@ type
   end;
 
   _CONTEXTMENUITEM = record
-    strName: PWideChar;
-    strStatusBarText: PWideChar;
-    lCommandID: Integer;
-    lInsertionPointID: Integer;
-    fFlags: Integer;
-    fSpecialFlags: Integer;
+    strName: PWideChar;           // LPWSTR
+    strStatusBarText: PWideChar;  // LPWSTR
+    lCommandID: Integer;          // LONG
+    lInsertionPointID: Integer;   // LONG
+    fFlags: Integer;              // LONG
+    fSpecialFlags: Integer;       // LONG
   end;
 
   _MMC_FILTERDATA = record
-    pszText: PWideChar;
-    cchTextMax: SYSINT;
-    lValue: Integer;
+    pszText: PWideChar;           // LPOLESTR
+    cchTextMax: SYSINT;           // INT
+    lValue: Integer;              // LONG
   end;
 
   _SNodeID2 = record
@@ -666,9 +672,9 @@ type
 
 
   _MMC_LISTPAD_INFO = record
-    szTitle: PWideChar;
-    szButtonText: PWideChar;
-    nCommandID: Integer;
+    szTitle: PWideChar;         // LPOLESTR
+    szButtonText: PWideChar;    // LPOLESTR
+    nCommandID: LONG_PTR ;      // LONG_PTR
   end;
 
   _MENUBUTTONDATA = record
@@ -678,16 +684,16 @@ type
   end;
 
   _MMC_RESTORE_VIEW = record
-    dwSize: UINT;
-    cookie: NativeInt;
-    pViewType: PWideChar;
-    lViewOptions: Integer;
+    dwSize: UINT;               // DWORD
+    cookie: MMC_COOKIE;          // MMC_COOKIE
+    pViewType: PWideChar;       // LPOLESTR
+    lViewOptions: Integer;      // long
   end;
 
   _MMC_EXPANDSYNC_STRUCT = record
-    bHandled: Integer;
-    bExpanding: Integer;
-    hItem: Integer;
+    bHandled: Integer;          // BOOL
+    bExpanding: Integer;        // BOOL
+    hItem: _HSCOPEITEM;         // HSCOPEITEM
   end;
 
   _MMC_VISIBLE_COLUMNS = record
@@ -725,13 +731,13 @@ type
     function QueryResultView(out pUnknown: IUnknown): HResult; stdcall;
     function QueryScopeImageList(out ppImageList: IImageList): HResult; stdcall;
     function QueryResultImageList(out ppImageList: IImageList): HResult; stdcall;
-    function UpdateAllViews(const lpDataObject: IDataObject; data: Integer; hint: Integer): HResult; stdcall;
+    function UpdateAllViews(const lpDataObject: IDataObject; data: LPARAM; hint: LONG_PTR): HResult; stdcall;
     function MessageBox(lpszText: PWideChar; lpszTitle: PWideChar; fuStyle: SYSUINT; 
                         out piRetval: SYSINT): HResult; stdcall;
     function QueryConsoleVerb(out ppConsoleVerb: IConsoleVerb): HResult; stdcall;
-    function SelectScopeItem(hScopeItem: Integer): HResult; stdcall;
+    function SelectScopeItem(hScopeItem: _HSCOPEITEM): HResult; stdcall;
     function GetMainWindow(out phwnd: wireHWND): HResult; stdcall;
-    function NewWindow(hScopeItem: Integer; lOptions: UINT): HResult; stdcall;
+    function NewWindow(hScopeItem: _HSCOPEITEM; lOptions: UINT): HResult; stdcall;
   end;
 
 // *********************************************************************//
@@ -775,10 +781,10 @@ type
 
 // *** Fix bug in TLB
 //    function ImageListSetIcon(var pIcon: Integer; nLoc: Integer): HResult; stdcall;
-    function ImageListSetIcon(pIcon: Integer; nLoc: Integer): HResult; stdcall;
+    function ImageListSetIcon(pIcon: LONG_PTR; nLoc: Integer): HResult; stdcall;          // todo: re-add var?
 //    function ImageListSetStrip(var pBMapSm: Integer; var pBMapLg: Integer; nStartLoc: Integer;
 //                               cMask: UINT): HResult; stdcall;
-    function ImageListSetStrip(pBMapSm: Integer; pBMapLg: Integer; nStartLoc: Integer;
+    function ImageListSetStrip(pBMapSm: LONG_PTR; pBMapLg: LONG_PTR; nStartLoc: Integer;  // todo: re-add var?
                                cMask: UINT): HResult; stdcall;
   end;
 
@@ -803,18 +809,18 @@ type
   IResultData = interface(IUnknown)
     ['{31DA5FA0-E0EB-11CF-9F21-00AA003CA9F6}']
     function InsertItem(var item: _RESULTDATAITEM): HResult; stdcall;
-    function DeleteItem(itemID: Integer; nCol: SYSINT): HResult; stdcall;
-    function FindItemByLParam(lParam: Windows.LPARAM; out pItemID: Integer): HResult; stdcall;
+    function DeleteItem(itemID: _HRESULTITEM; nCol: SYSINT): HResult; stdcall;
+    function FindItemByLParam(lParam: Windows.LPARAM; out pItemID: _HRESULTITEM): HResult; stdcall;
     function DeleteAllRsltItems: HResult; stdcall;
     function SetItem(var item: _RESULTDATAITEM): HResult; stdcall;
     function GetItem(var item: _RESULTDATAITEM): HResult; stdcall;
     function GetNextItem(var item: _RESULTDATAITEM): HResult; stdcall;
-    function ModifyItemState(nIndex: SYSINT; itemID: Integer; uAdd: SYSUINT; uRemove: SYSUINT): HResult; stdcall;
+    function ModifyItemState(nIndex: SYSINT; itemID: _HRESULTITEM; uAdd: SYSUINT; uRemove: SYSUINT): HResult; stdcall;
     function ModifyViewStyle(add: _MMC_RESULT_VIEW_STYLE; remove: _MMC_RESULT_VIEW_STYLE): HResult; stdcall;
     function SetViewMode(lViewMode: Integer): HResult; stdcall;
     function GetViewMode(out lViewMode: Integer): HResult; stdcall;
-    function UpdateItem(itemID: Integer): HResult; stdcall;
-    function Sort(nColumn: SYSINT; dwSortOptions: UINT; lUserParam: Integer): HResult; stdcall;
+    function UpdateItem(itemID: _HRESULTITEM): HResult; stdcall;
+    function Sort(nColumn: SYSINT; dwSortOptions: UINT; lUserParam: LPARAM): HResult; stdcall;
     function SetDescBarText(DescText: PWideChar): HResult; stdcall;
     function SetItemCount(nItemCount: SYSINT; dwOptions: UINT): HResult; stdcall;
   end;
@@ -827,12 +833,12 @@ type
   IConsoleNameSpace = interface(IUnknown)
     ['{BEDEB620-F24D-11CF-8AFC-00AA003CA9F6}']
     function InsertItem(var item: _SCOPEDATAITEM): HResult; stdcall;
-    function DeleteItem(hItem: Integer; fDeleteThis: Integer): HResult; stdcall;
+    function DeleteItem(hItem: _HSCOPEITEM; fDeleteThis: Integer): HResult; stdcall;
     function SetItem(var item: _SCOPEDATAITEM): HResult; stdcall;
     function GetItem(var item: _SCOPEDATAITEM): HResult; stdcall;
-    function GetChildItem(item: Integer; out pItemChild: Integer; out pCookie: NativeInt): HResult; stdcall;
-    function GetNextItem(item: Integer; out pItemNext: Integer; out pCookie: NativeInt): HResult; stdcall;
-    function GetParentItem(item: Integer; out pItemParent: Integer; out pCookie: NativeInt): HResult; stdcall;
+    function GetChildItem(item: _HSCOPEITEM; out pItemChild: _HSCOPEITEM; out pCookie: MMC_COOKIE): HResult; stdcall;
+    function GetNextItem(item: _HSCOPEITEM; out pItemNext: _HSCOPEITEM; out pCookie: MMC_COOKIE): HResult; stdcall;
+    function GetParentItem(item: _HSCOPEITEM; out pItemParent: _HSCOPEITEM; out pCookie: MMC_COOKIE): HResult; stdcall;
   end;
 
 // *********************************************************************//
@@ -842,14 +848,14 @@ type
 // *********************************************************************//
   IPropertySheetProvider = interface(IUnknown)
     ['{85DE64DE-EF21-11CF-A285-00C04FD8DBE6}']
-    function CreatePropertySheet(title: PWideChar; _type: Shortint; cookie: NativeInt;
+    function CreatePropertySheet(title: PWideChar; _type: Shortint; cookie: MMC_COOKIE;
                                  const pIDataObjectm: IDataObject; dwOptions: UINT): HResult; stdcall;
-    function FindPropertySheet(cookie: NativeInt; const lpComponent: IComponent;
+    function FindPropertySheet(cookie: MMC_COOKIE; const lpComponent: IComponent;
                                const lpDataObject: IDataObject): HResult; stdcall;
-    function AddPrimaryPages(const lpUnknown: IUnknown; bCreateHandle: Integer; 
+    function AddPrimaryPages(const lpUnknown: IUnknown; bCreateHandle: Integer;
                              var hNotifyWindow: _RemotableHandle; bScopePane: Integer): HResult; stdcall;
     function AddExtensionPages: HResult; stdcall;
-    function Show(window: Integer; page: SYSINT): HResult; stdcall;
+    function Show(window: LONG_PTR; page: SYSINT): HResult; stdcall;
   end;
 
 // *********************************************************************//
@@ -862,10 +868,10 @@ type
     function Initialize(const lpConsole: IConsole): HResult; stdcall;
     function Notify(const lpDataObject: IDataObject; event: _MMC_NOTIFY_TYPE; arg: LPARAM;
                     param: LPARAM): HResult; stdcall;
-    function Destroy(cookie: NativeInt): HResult; stdcall;
-    function QueryDataObject(cookie: NativeInt; _type: _DATA_OBJECT_TYPES;
+    function Destroy(cookie: MMC_COOKIE): HResult; stdcall;
+    function QueryDataObject(cookie: MMC_COOKIE; _type: _DATA_OBJECT_TYPES;
                              out ppDataObject: IDataObject): HResult; stdcall;
-    function GetResultViewType(cookie: NativeInt; out ppViewType: PWideChar; out pViewOptions: Integer): HResult; stdcall;
+    function GetResultViewType(cookie: MMC_COOKIE; out ppViewType: PWideChar; out pViewOptions: Integer): HResult; stdcall;
     function GetDisplayInfo(var pResultDataItem: _RESULTDATAITEM): HResult; stdcall;
     function CompareObjects(const lpDataObjectA: IDataObject; const lpDataObjectB: IDataObject): HResult; stdcall;
   end;
@@ -901,7 +907,7 @@ type
     function EmptyMenuList: HResult; stdcall;
     function AddPrimaryExtensionItems(const piExtension: IUnknown; const piDataObject: IDataObject): HResult; stdcall;
     function AddThirdPartyExtensionItems(const piDataObject: IDataObject): HResult; stdcall;
-    function ShowContextMenu(var hwndParent: _RemotableHandle; xPos: Integer; yPos: Integer; 
+    function ShowContextMenu(var hwndParent: _RemotableHandle; xPos: Integer; yPos: Integer;
                              out plSelected: Integer): HResult; stdcall;
   end;
 
@@ -948,7 +954,7 @@ type
 // *********************************************************************//
   IConsole2 = interface(IConsole)
     ['{103D842A-AA63-11D1-A7E1-00C04FD8D565}']
-    function Expand(hItem: Integer; bExpand: Integer): HResult; stdcall;
+    function Expand(hItem: _HSCOPEITEM; bExpand: Integer): HResult; stdcall;
     function IsTaskpadViewPreferred: HResult; stdcall;
     function SetStatusText(pszStatusText: PWideChar): HResult; stdcall;
   end;
@@ -972,8 +978,8 @@ type
 // *********************************************************************//
   IConsoleNameSpace2 = interface(IConsoleNameSpace)
     ['{255F18CC-65DB-11D1-A7DC-00C04FD8D565}']
-    function Expand(hItem: Integer): HResult; stdcall;
-    function AddExtension(hItem: Integer; var lpClsid: TGUID): HResult; stdcall;
+    function Expand(hItem: _HSCOPEITEM): HResult; stdcall;
+    function AddExtension(hItem: _HSCOPEITEM; var lpClsid: TGUID): HResult; stdcall;
   end;
 
 // *********************************************************************//
@@ -1027,7 +1033,7 @@ type
     function Notify(const lpDataObject: IDataObject; event: _MMC_NOTIFY_TYPE; arg: Windows.LPARAM;
                     param: Windows.LPARAM): HResult; stdcall;
     function Destroy: HResult; stdcall;
-    function QueryDataObject(cookie: NativeInt; _type: _DATA_OBJECT_TYPES;
+    function QueryDataObject(cookie: MMC_COOKIE; _type: _DATA_OBJECT_TYPES;
                              out ppDataObject: IDataObject): HResult; stdcall;
     function GetDisplayInfo(var pScopeDataItem: _SCOPEDATAITEM): HResult; stdcall;
     function CompareObjects(const lpDataObjectA: IDataObject; const lpDataObjectB: IDataObject): HResult; stdcall;
@@ -1040,7 +1046,7 @@ type
 // *********************************************************************//
   IExtendPropertySheet = interface(IUnknown)
     ['{85DE64DC-EF21-11CF-A285-00C04FD8DBE6}']
-    function CreatePropertyPages(const lpProvider: IPropertySheetCallback; handle: NativeInt;
+    function CreatePropertyPages(const lpProvider: IPropertySheetCallback; handle: LONG_PTR;
                                  const lpIDataObject: IDataObject): HResult; stdcall;
     function QueryPagesFor(const lpDataObject: IDataObject): HResult; stdcall;
   end;
@@ -1064,7 +1070,7 @@ type
 // *********************************************************************//
   IResultDataCompare = interface(IUnknown)
     ['{E8315A52-7A1A-11D0-A2D2-00C04FD909DD}']
-    function Compare(lUserParam: Integer; cookieA: NativeInt; cookieB: NativeInt; var pnResult: SYSINT): HResult; stdcall;
+    function Compare(lUserParam: LPARAM; cookieA: MMC_COOKIE; cookieB: MMC_COOKIE; var pnResult: SYSINT): HResult; stdcall;
   end;
 
 // *********************************************************************//
@@ -1091,7 +1097,7 @@ type
     ['{9CB396D8-EA83-11D0-AEF1-00C04FB6DD2C}']
     function FindItem(var pFindInfo: _RESULTFINDINFO; out pnFoundIndex: SYSINT): HResult; stdcall;
     function CacheHint(nStartIndex: SYSINT; nEndIndex: SYSINT): HResult; stdcall;
-    function SortItems(nColumn: SYSINT; dwSortOptions: UINT; lUserParam: Integer): HResult; stdcall;
+    function SortItems(nColumn: SYSINT; dwSortOptions: UINT; lUserParam: LPARAM): HResult; stdcall;
   end;
 
 // *********************************************************************//

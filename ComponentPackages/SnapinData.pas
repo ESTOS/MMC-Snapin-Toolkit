@@ -4,6 +4,8 @@
  | 10.0.0.1  01/08/2005 Colin Wilson  DeXter version						            |
  |                                                                          |
  |           Hangs IDE on exit - fixed                                      |
+ |                                                                          |
+ |           27/08/2018 CHS           Fixed several types according to MSDN |
  *==========================================================================*)
 
 unit SnapinData;
@@ -115,7 +117,7 @@ private
   FSubItems: TStrings;
   FToolbarButtons: TSnapinToolbarButtons;
   FParentToolbarButtons: boolean;
-  FItemID: Integer;
+  FItemID: _HSCOPEITEM;
   FParentMainMenu: boolean;
   FMainMenu: TMainMenu;
   FOldMainMenuOnChange : TMenuChangeEvent;
@@ -208,7 +210,7 @@ public
   property SnapinData : TSnapinData read fSnapinData;
   property SubItems : TStrings read FSubItems;
   property Parent : TScopeItem read GetParent;
-  property ItemID : Integer read fItemID write FItemID;
+  property ItemID : _HSCOPEITEM read fItemID write FItemID;
   property Selected : boolean read GetSelected write SetSelected;
 
 published

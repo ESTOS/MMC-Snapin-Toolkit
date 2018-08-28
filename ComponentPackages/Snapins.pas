@@ -72,6 +72,9 @@
  |           27/11/2013 CHS           Fixed Cookies-Type (According to      |
  |                                    http://msdn.microsoft.com/en-us/library/aa814626%28v=vs.85%29.aspx
  |                                    a cookie is pointer-sized.            |
+ |                                                                          |
+ |           27/08/2018 CHS           Fixed several types according to MSDN |
+ |                                                                          |
  | Outstanding issues:                                                      |
  |                                                                          |
  |   Can't add menu buttons at run-time ?                                   |
@@ -88,7 +91,7 @@ uses Windows, Messages, ActiveX, SysUtils, ComObj, Classes, Menus, MMC_TLB, Snap
 
 type
 
-HSCOPEITEM = LongInt;
+//HSCOPEITEM = LongInt; // actually a LONG_PTR / nativeint
 TSnapinComponent = class;
 
 (*----------------------------------------------------------------------*
@@ -153,7 +156,7 @@ protected
 
   function GetSnapinData : TSnapinData; virtual; abstract;
 
-  procedure EnumerateScopePane (dataObject : IDataObject; pParent : HSCOPEITEM);
+  procedure EnumerateScopePane (dataObject : IDataObject; pParent : _HSCOPEITEM);
   function CreateScopeItemListFromDataObject (dataObject : IDataObject) : TList;
 public
   property SnapinData : TSnapinData read fSnapinData;
@@ -290,7 +293,7 @@ protected
   function ExtendControlbarControlbarNotify(event: _MMC_NOTIFY_TYPE; arg, param: LPARAM): HResult; stdcall;
 
   // IResultDataCompare
-  function ResultDataCompareCompare(lUserParam:Integer; cookieA, cookieB: NativeInt; var pnResult: SYSINT): HResult; stdcall;
+  function ResultDataCompareCompare(lUserParam:LPARAM; cookieA, cookieB: MMC_COOKIE; var pnResult: SYSINT): HResult; stdcall;
 
   // IExtendPropertySheet
   function ExtendPropertySheetCreatePropertyPages(const lpProvider: IPropertySheetCallback; handle: NativeInt;
@@ -300,7 +303,7 @@ protected
   // IResultOwnerData;
   function ResultOwnerDataFindItem(var pFindInfo: _RESULTFINDINFO; out pnFoundIndex: SYSINT): HResult; stdcall;
   function ResultOwnerDataCacheHint(nStartIndex: SYSINT; nEndIndex: SYSINT): HResult; stdcall;
-  function ResultOwnerDataSortItems(nColumn: SYSINT; dwSortOptions: UINT; lUserParam: Integer): HResult; stdcall;
+  function ResultOwnerDataSortItems(nColumn: SYSINT; dwSortOptions: UINT; lUserParam: LPARAM): HResult; stdcall;
 end;
 
 TComponentDataClass = class of TSnapinComponentData;
@@ -310,7 +313,7 @@ function MMCPropertyChangeNotify (handle : LongInt; param : LParam) : HRESULT; s
 
 implementation
 
-uses Registry;
+uses Registry {$if CompilerVersion >=32},System.UITypes{$ifend};
 
 var
                                           // IDataObject formats for snapin data
@@ -1202,7 +1205,7 @@ end;
  |   pParent    : HSCOPEITEM    The scope item's parent node handle.    |
  *----------------------------------------------------------------------*)
 
-procedure TSnapinComponentData.EnumerateScopePane(dataObject: IDataObject; pParent: HSCOPEITEM);
+procedure TSnapinComponentData.EnumerateScopePane(dataObject: IDataObject; pParent: _HSCOPEITEM);
 var
   i : Integer;
   item : _SCOPEDATAITEM;
@@ -3683,8 +3686,8 @@ end;
  |                                                                          |
  | The function returns an OLE success code
  *--------------------------------------------------------------------------*)
-function TSnapinComponent.ResultDataCompareCompare(lUserParam:Integer; cookieA,
-  cookieB: NativeInt; var pnResult: SYSINT): HResult;
+function TSnapinComponent.ResultDataCompareCompare(lUserParam:LPARAM; cookieA,
+  cookieB: MMC_COOKIE; var pnResult: SYSINT): HResult;
 var
   nCol : Integer;
   szStringA, szStringB : string;
@@ -3754,7 +3757,7 @@ begin
 end;
 
 function TSnapinComponent.ResultOwnerDataSortItems(nColumn: SYSINT;
-  dwSortOptions: UINT; lUserParam: Integer): HResult;
+  dwSortOptions: UINT; lUserParam: LPARAM): HResult;
 var
   allow: boolean;
 begin
@@ -4013,6 +4016,7 @@ var
   i, idx : Integer;
   deleteList : TList;
   itm : _SCOPEDATAITEM;
+  scopeItm: _HSCOPEITEM;
   node : TScopeItem;
 begin
   if not item.RefreshEnabled then Exit;
@@ -4020,11 +4024,11 @@ begin
   deleteList := TList.Create;
   try
     ns := fParent.fConsoleNameSpace;
-    if ns.GetChildItem (item.ItemID, i, cookie) = S_OK then
-      while i <> 0 do
+    if ns.GetChildItem (item.ItemID, scopeItm, cookie) = S_OK then
+      while scopeItm <> 0 do
       begin
-        deleteList.Add (pointer (i));
-        ns.GetNextItem (i, i, cookie)
+        deleteList.Add (pointer (scopeItm));
+        ns.GetNextItem (scopeItm, scopeItm, cookie)
       end;
 
     for i := 0 to item.ScopeItems.Count - 1 do
