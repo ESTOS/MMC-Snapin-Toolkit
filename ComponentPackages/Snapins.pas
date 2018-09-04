@@ -2427,7 +2427,8 @@ var
   scopeItem, scopeItem1 : TScopeItem;
   sourceItem, destItem, itm : TObject;
   allow : boolean;
-  i, iid, n : Integer;
+  i, n : Integer;
+  iid: _HRESULTITEM;
   bSelect : boolean;
   MultiSelectList : TList;
   updateCol : TCollection;
@@ -3965,7 +3966,7 @@ end;
 procedure TSnapinComponent.SetResultItemState(viewIdx : Integer; item: TResultItem;
   state: SYSUINT; enable: boolean);
 var
-  iid : Integer;
+  iid : _HRESULTITEM;
 begin
   iid := item.itemID [viewIdx];
 
@@ -4062,8 +4063,8 @@ begin
     end;
 
     for i := 0 to deleteList.Count - 1 do
-      if Integer (deleteList [i]) <> 0 then
-        ns.DeleteItem (Integer (deleteList [i]), 1);
+      if _HSCOPEITEM (deleteList [i]) <> 0 then
+        ns.DeleteItem (_HSCOPEITEM (deleteList [i]), 1);
   finally
     deleteList.Free
   end

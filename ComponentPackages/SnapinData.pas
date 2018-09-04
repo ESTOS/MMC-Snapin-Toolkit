@@ -325,7 +325,7 @@ private
   FText: string;
   FSubItems: TStrings;
   FImageIndex: Integer;
-  fItemID: array of Integer;  // 1 per view
+  fItemID: array of _HRESULTITEM;  // 1 per view
   fCurrentViewIdx : Integer;
   fOwnerDataScopeItem : TScopeItem;
 
@@ -334,13 +334,13 @@ private
   procedure SetImageIndex(const Value: Integer);
   function GetSelected: boolean;
   procedure SetSelected(const Value: boolean);
-  function GetItemID(viewIdx: Integer): Integer;
-  procedure SetItemID(viewIdx: Integer; const Value: Integer);
+  function GetItemID(viewIdx: Integer): _HRESULTITEM;
+  procedure SetItemID(viewIdx: Integer; const Value: _HRESULTITEM);
   function GetFocused: boolean;
   procedure SetFocused(const Value: boolean);
   procedure SetScopeItem(const Value: TScopeItem);
   procedure SubItemsOnChange (sender : TObject);
-  function GetCurrentID: Integer;
+  function GetCurrentID: _HRESULTITEM;
 
 protected
   dontRefreshOnSetText : boolean;
@@ -356,8 +356,8 @@ public
   procedure Refresh;
   property Selected : boolean read GetSelected write SetSelected;
   property Focused : boolean read GetFocused write SetFocused;
-  property ItemID [viewIdx : Integer] : Integer read GetItemID write SetItemID;
-  property CurrentID : Integer read GetCurrentID;
+  property ItemID [viewIdx : Integer] : _HRESULTITEM read GetItemID write SetItemID;
+  property CurrentID : _HRESULTITEM read GetCurrentID;
 
 published
   property Text : string read FText write SetText;
@@ -1165,7 +1165,7 @@ begin
   inherited Destroy;
 end;
 
-function TResultItem.GetCurrentID: Integer;
+function TResultItem.GetCurrentID: _HRESULTITEM; //really integer?
 begin
   result := fItemID [fCurrentViewIdx];
 end;
@@ -1175,7 +1175,7 @@ begin
   result := (TSnapinComponentData (ScopeItem.SnapinData.Parent).ResultItemState (self) and LVIS_FOCUSED) <> 0
 end;
 
-function TResultItem.GetItemID(viewIdx: Integer): Integer;
+function TResultItem.GetItemID(viewIdx: Integer): _HRESULTITEM;  //really integer?
 begin
   if viewIdx = -1 then
     viewIdx := TSnapinComponentData (ScopeItem.SnapinData.Parent).ActiveView;
@@ -1228,7 +1228,7 @@ begin
   Refresh;
 end;
 
-procedure TResultItem.SetItemID(viewIdx: Integer; const Value: Integer);
+procedure TResultItem.SetItemID(viewIdx: Integer; const Value: _HRESULTITEM);    //really integer?
 begin
   if viewIdx = -1 then
     viewIdx := TSnapinComponentData (ScopeItem.SnapinData.Parent).ActiveView;
