@@ -1570,6 +1570,10 @@ procedure TSnapinComponentData.Initialize;
   end;
 
 begin
+  //In dlls MainThreadID is ID of the thread that loaded the dll and not necessary the ID of the UI thread
+  //See also -> https://stackoverflow.com/a/37770909
+  MainThreadID := GetCurrentThreadID;
+
   fColumnsChanged := True;
   fSnapinData := GetSnapinData;
   fSnapinData.Parent := self;
